@@ -1,0 +1,13 @@
+{
+  "cluster_name": "pd-spot-dev",
+  "target_colour": "green",
+  "image_tag": "dev-v1",
+  "base_dn": "dc=example,dc=com",
+  "verified_at": "REPLACE_WITH_CURRENT_UTC_ISO_TIMESTAMP",
+  "operator": "REPLACE_WITH_OPERATOR",
+  "evidence_notes": "Record replication reports, all base DNs, acknowledged-write reconciliation, observed image and profile, and rollback checks.",
+  "replication_verified_all_base_dns": false,
+  "writes_reconciled": false,
+  "rollback_compatible": false,
+  "direct_writers_accounted_for": false
+}

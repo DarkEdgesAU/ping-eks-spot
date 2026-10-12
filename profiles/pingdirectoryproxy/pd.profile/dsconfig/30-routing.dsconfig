@@ -1,0 +1,9 @@
+# Explicit backends are selected by colour; their pod ordinals do not identify AZs.
+# Balance across the selected colour without requiring external-server locations.
+dsconfig create-load-balancing-algorithm     --algorithm-name active-directory     --type fewest-operations     --set enabled:true     --set use-location:false     --set backend-server:${ACTIVE_COLOUR}-0     --set backend-server:${ACTIVE_COLOUR}-1     --set backend-server:${ACTIVE_COLOUR}-2
+
+dsconfig create-request-processor     --processor-name directory     --type proxying     --set load-balancing-algorithm:active-directory
+
+dsconfig create-subtree-view     --view-name directory     --set base-dn:${USER_BASE_DN}     --set request-processor:directory
+
+dsconfig set-client-connection-policy-prop     --policy-name default     --set subtree-view:directory

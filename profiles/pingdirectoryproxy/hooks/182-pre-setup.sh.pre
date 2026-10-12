@@ -1,0 +1,10 @@
+    #!/usr/bin/env sh
+    set -eu
+    # Run-plan assigns LOCATION from colour; replace it with the physical AZ.
+    zone=$(cat /runtime/availability-zone)
+    case "$zone" in *[!a-z0-9-]*|'') echo 'Invalid AZ supplied by init container' >&2; exit 1;; esac
+    printf '
+LOCATION=%s
+_podLocation=%s
+' "$zone" "$zone" >> "${CONTAINER_ENV}"
+

@@ -1,0 +1,20 @@
+    #!/usr/bin/env sh
+    set -eu
+    # Run-plan assigns LOCATION from colour; replace it with the physical AZ.
+    zone=$(cat /runtime/availability-zone)
+    case "$zone" in *[!a-z0-9-]*|'') echo 'Invalid AZ supplied by init container' >&2; exit 1;; esac
+    printf '
+LOCATION=%s
+_podLocation=%s
+' "$zone" "$zone" >> "${CONTAINER_ENV}"
+
+case "${USER_BASE_DN}" in
+  dc=*) value=${USER_BASE_DN#dc=}; value=${value%%,*}; attribute=dc; class=domain;;
+  o=*) value=${USER_BASE_DN#o=}; value=${value%%,*}; attribute=o; class=organization;;
+  *) echo 'Base DN must begin with dc= or o=' >&2; exit 1;;
+esac
+printf '
+BASE_VALUE=%s
+BASE_ATTRIBUTE=%s
+BASE_CLASS=%s
+' "$value" "$attribute" "$class" >> "${CONTAINER_ENV}"

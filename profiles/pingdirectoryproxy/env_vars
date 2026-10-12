@@ -1,0 +1,12 @@
+export USER_BASE_DN=${USER_BASE_DN:-dc=example,dc=com}
+export ROOT_USER_DN=${ROOT_USER_DN:-cn=administrator}
+export ROOT_USER_PASSWORD_FILE=/run/ping-secrets/root-user-password
+export ADMIN_USER_PASSWORD_FILE=/run/ping-secrets/admin-user-password
+export ENCRYPTION_PASSWORD_FILE=/run/ping-secrets/encryption-password
+export KEYSTORE_FILE=/run/ping-secrets/keystore.p12
+export KEYSTORE_PIN_FILE=/run/ping-secrets/keystore.pin
+export KEYSTORE_TYPE=pkcs12
+export CERTIFICATE_NICKNAME=ping
+export TRUSTSTORE_FILE=/run/ping-secrets/truststore.p12
+export TRUSTSTORE_PIN_FILE=/run/ping-secrets/truststore.pin
+export TRUSTSTORE_TYPE=pkcs12

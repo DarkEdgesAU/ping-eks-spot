@@ -1,0 +1,1 @@
+dsconfig create-trust-manager-provider     --provider-name "Project CA"     --type file-based     --set enabled:true     --set trust-store-file:/run/ping-secrets/truststore.p12     --set trust-store-type:PKCS12     --set trust-store-pin-file:/run/ping-secrets/truststore.pin

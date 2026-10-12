@@ -1,0 +1,9 @@
+{
+  "name": "PingDirectory EKS Spot development",
+  "build": {"dockerfile": "Dockerfile"},
+  "features": {"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}},
+  "mounts": ["source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind"],
+  "remoteUser": "vscode",
+  "postCreateCommand": "make setup",
+  "customizations": {"vscode": {"extensions": ["hashicorp.terraform", "redhat.vscode-yaml"]}}
+}

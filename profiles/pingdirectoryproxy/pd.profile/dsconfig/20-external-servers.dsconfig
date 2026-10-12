@@ -1,0 +1,65 @@
+dsconfig create-external-server \
+    --server-name blue-0 \
+    --type ping-identity-ds \
+    --set server-host-name:pd-pingdirectory-0.pd-pingdirectory-cluster.identity-blue.svc.cluster.local \
+    --set server-port:1636 \
+    --set bind-dn:cn=administrator \
+    --set password<${ROOT_USER_PASSWORD_FILE} \
+    --set connection-security:ssl \
+    --set key-manager-provider:Null \
+    --set 'trust-manager-provider:Project CA'
+
+dsconfig create-external-server \
+    --server-name blue-1 \
+    --type ping-identity-ds \
+    --set server-host-name:pd-pingdirectory-1.pd-pingdirectory-cluster.identity-blue.svc.cluster.local \
+    --set server-port:1636 \
+    --set bind-dn:cn=administrator \
+    --set password<${ROOT_USER_PASSWORD_FILE} \
+    --set connection-security:ssl \
+    --set key-manager-provider:Null \
+    --set 'trust-manager-provider:Project CA'
+
+dsconfig create-external-server \
+    --server-name blue-2 \
+    --type ping-identity-ds \
+    --set server-host-name:pd-pingdirectory-2.pd-pingdirectory-cluster.identity-blue.svc.cluster.local \
+    --set server-port:1636 \
+    --set bind-dn:cn=administrator \
+    --set password<${ROOT_USER_PASSWORD_FILE} \
+    --set connection-security:ssl \
+    --set key-manager-provider:Null \
+    --set 'trust-manager-provider:Project CA'
+
+dsconfig create-external-server \
+    --server-name green-0 \
+    --type ping-identity-ds \
+    --set server-host-name:pd-pingdirectory-0.pd-pingdirectory-cluster.identity-green.svc.cluster.local \
+    --set server-port:1636 \
+    --set bind-dn:cn=administrator \
+    --set password<${ROOT_USER_PASSWORD_FILE} \
+    --set connection-security:ssl \
+    --set key-manager-provider:Null \
+    --set 'trust-manager-provider:Project CA'
+
+dsconfig create-external-server \
+    --server-name green-1 \
+    --type ping-identity-ds \
+    --set server-host-name:pd-pingdirectory-1.pd-pingdirectory-cluster.identity-green.svc.cluster.local \
+    --set server-port:1636 \
+    --set bind-dn:cn=administrator \
+    --set password<${ROOT_USER_PASSWORD_FILE} \
+    --set connection-security:ssl \
+    --set key-manager-provider:Null \
+    --set 'trust-manager-provider:Project CA'
+
+dsconfig create-external-server \
+    --server-name green-2 \
+    --type ping-identity-ds \
+    --set server-host-name:pd-pingdirectory-2.pd-pingdirectory-cluster.identity-green.svc.cluster.local \
+    --set server-port:1636 \
+    --set bind-dn:cn=administrator \
+    --set password<${ROOT_USER_PASSWORD_FILE} \
+    --set connection-security:ssl \
+    --set key-manager-provider:Null \
+    --set 'trust-manager-provider:Project CA'

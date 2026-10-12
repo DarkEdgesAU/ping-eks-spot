@@ -1,0 +1,17 @@
+.terraform/
+*.tfstate*
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+config.json
+.env
+.env.*
+!.env.example
+crash.log
+crash.*.log
+.secrets/
+build/
+__pycache__/
+*.pyc
+.venv/

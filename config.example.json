@@ -1,0 +1,14 @@
+{
+  "region": "ap-southeast-2",
+  "cluster_name": "pd-spot-dev",
+  "chart_version": "0.16.0",
+  "base_image_tag": "2609",
+  "image_tag": "dev-v1",
+  "replicas": 3,
+  "base_dn": "dc=example,dc=com",
+  "initial_seed_colour": "blue",
+  "directory_storage": "100Gi",
+  "storage_class": "pingdirectory-ebs",
+  "directory_capacity_type": "SPOT",
+  "accept_eula": false
+}

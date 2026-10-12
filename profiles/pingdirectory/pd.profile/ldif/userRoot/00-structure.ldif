@@ -1,0 +1,14 @@
+dn: ${USER_BASE_DN}
+objectClass: top
+objectClass: ${BASE_CLASS}
+${BASE_ATTRIBUTE}: ${BASE_VALUE}
+
+dn: ou=people,${USER_BASE_DN}
+objectClass: top
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,${USER_BASE_DN}
+objectClass: top
+objectClass: organizationalUnit
+ou: groups

@@ -1,0 +1,2 @@
+# Assistance only; LDAP success is not an assured-write guarantee.
+dsconfig create-replication-assurance-policy --policy-name "Project Cross AZ Writes" --set evaluation-order-index:1 --set local-level:processed-all-servers --set remote-level:processed-all-remote-servers --set timeout:2s --set request-criteria:"Write Requests"
