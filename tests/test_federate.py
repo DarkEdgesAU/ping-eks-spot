@@ -112,6 +112,7 @@ sleep() { :; }
     def test_variable_projection_uses_regular_runtime_copy(self):
         v=federate.values(self.config,'blue')
         projected=v['volumes']['pf-projected']['secret']
+        self.assertIn({'key':'PingFederate.lic','path':'pingfederate.lic'},projected['items'])
         self.assertIn({'key':'var.PF_CLUSTER_PASSWORD','path':'vars/PF_CLUSTER_PASSWORD'},projected['items'])
         self.assertEqual(v['volumes']['pf-secrets']['emptyDir']['medium'],'Memory')
         self.assertFalse(any(m['name']=='pf-projected' for m in v['global']['volumeMounts']))

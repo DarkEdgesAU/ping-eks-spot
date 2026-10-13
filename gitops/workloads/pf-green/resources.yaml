@@ -428,7 +428,7 @@ spec:
           - key: ca.crt
             path: ca.crt
           - key: PingFederate.lic
-            path: PingFederate.lic
+            path: pingfederate.lic
           - key: pf.jwk
             path: pf.jwk
           - key: var.dataStores_items_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_password
@@ -639,7 +639,7 @@ spec:
           - key: ca.crt
             path: ca.crt
           - key: PingFederate.lic
-            path: PingFederate.lic
+            path: pingfederate.lic
           - key: pf.jwk
             path: pf.jwk
           - key: var.dataStores_items_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_password

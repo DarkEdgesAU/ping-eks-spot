@@ -47,6 +47,9 @@ delete PVCs as a migration workaround. This sequence assumes a fresh lab.
 
 Supply authorized Directory/Proxy licenses and `.secrets/PingFederate.lic`:
 
+The Kubernetes Secret keeps the `PingFederate.lic` key; its projected runtime
+filename is `pingfederate.lic`, matching the Linux container's license lookup.
+
 ```bash
 make secrets
 make pf-secrets

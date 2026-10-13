@@ -123,6 +123,8 @@ def values(c, colour, repository=None):
     image = {'repositoryFqn':repository or 'example.invalid/pingfederate', 'tag':c['image_tags'][colour]}
     mapping = json.loads((ROOT/'profiles/pingfederate/secret-variables.json').read_text())
     secret_items = [{'key':key,'path':key} for key in ('ca.crt','PingFederate.lic','pf.jwk')]
+    # Keep the operator's filename/Secret key, but Linux runtime expects lowercase.
+    next(item for item in secret_items if item['key']=='PingFederate.lic')['path']='pingfederate.lic'
     secret_items += [{'key':'var.'+name,'path':'vars/'+name}
                      for name in (*mapping,'PING_IDENTITY_PASSWORD','PF_CLUSTER_PASSWORD')]
     v = {'global':{'image':{'tag':c['base_image_tag']},'envs':env,
