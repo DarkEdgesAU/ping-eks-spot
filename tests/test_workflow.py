@@ -48,10 +48,10 @@ class PromotionBoundaryTests(unittest.TestCase):
         for target in ('blue', 'green', 'proxy'):
             v = p.values(self.c, target)['global']
             mounts = {m['name']: m['mountPath'] for m in v['volumeMounts']}
-            self.assertEqual(mounts['runtime-secrets'], '/run/ping-secrets')
-            self.assertEqual(v['envs']['SECRETS_DIR'], mounts['runtime-secrets'])
+            self.assertEqual(mounts['runtime-secret-files'], '/run/ping-secrets')
+            self.assertEqual(v['envs']['SECRETS_DIR'], mounts['runtime-secret-files'])
             for key in ('KEYSTORE_FILE', 'KEYSTORE_PIN_FILE', 'TRUSTSTORE_FILE', 'TRUSTSTORE_PIN_FILE'):
-                self.assertTrue(v['envs'][key].startswith(mounts['runtime-secrets'] + '/'))
+                self.assertTrue(v['envs'][key].startswith(mounts['runtime-secret-files'] + '/'))
     def test_same_named_cluster_in_other_account_refused(self):
         out={'cluster_name':self.c['cluster_name'],'region':self.c['region'],
              'cluster_arn':'arn:aws:eks:ap-southeast-2:111111111111:cluster/pd-spot-dev'}

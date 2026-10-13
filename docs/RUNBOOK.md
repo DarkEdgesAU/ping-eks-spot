@@ -33,6 +33,20 @@ For a complete AZ outage, serve through surviving AZs. Do not attempt to attach 
 
 ## Secrets and cleanup
 
+Runtime Secret files are copied by `prepare-runtime` into a memory-backed emptyDir
+before the server starts. The application mounts that copy read-only at
+`/run/ping-secrets`; setup can therefore canonicalize filenames without persisting
+Kubernetes Secret projection timestamps. Secret changes take effect on a deliberate
+pod restart, not through live projection updates. Coordinate certificate/password
+rotation across the replication topology and proxy before restarting workloads.
+
+For retained instances created by the earlier direct Secret mount, the same init
+step normalizes saved key/trust-store file and PIN paths in `config/config.ldif`
+while the server is stopped. It unfolds LDIF lines and preserves the original
+configuration as `config.ldif.before-secret-path-repair.<timestamp>` on the PVC.
+It does not alter server identity, passwords, encryption settings, or directory data.
+This step must never run concurrently with a directory process using the same PVC.
+
 The CA private key stays on the remote developer host in ignored `.secrets/`; it is not mounted into pods. Server key material is in the generated PKCS12 keystore. The development environment shares that server key across replicas. Production needs an approved credential and certificate lifecycle.
 
 Retain local secret material securely; losing encryption settings and their passwords can make retained encrypted data unusable. Do not regenerate secrets over an existing deployment casually. The generator reuses existing files.

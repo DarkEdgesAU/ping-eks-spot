@@ -111,6 +111,10 @@ Promotion persists the active colour before changing all proxy algorithms, so a 
 
 ## Suggested first Codex task
 
+For continuous LDAP traffic during a blue/green promotion, see [docs/LOADTEST.md](docs/LOADTEST.md).
+The JMeter suite seeds disposable entries, records operations and promotion markers,
+and reconciles acknowledged writes directly against all six directory replicas.
+
 > Read AGENTS.md, README.md and docs/ROADMAP.md. Review the Terraform plan and profile lifecycle against the pinned Ping images. Implement a live validation command that checks every replicated base DN, verifies each server's AZ location, and reconciles acknowledged LDAPS test writes across both colours. Keep validation and deployment separate, and do not apply AWS changes without my instruction.
 
 See [docs/VALIDATION.md](docs/VALIDATION.md) for checks performed while creating this package and the remaining runtime limitations.

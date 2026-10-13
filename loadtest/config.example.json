@@ -1,0 +1,15 @@
+{
+  "proxy_url": "ldaps://localhost:1636",
+  "base_dn": "dc=example,dc=com",
+  "bind_dn": "cn=administrator",
+  "password_file": ".secrets/root-user-password",
+  "truststore": ".secrets/truststore.p12",
+  "truststore_pin_file": ".secrets/truststore.pin",
+  "clients": 10,
+  "rate": 10,
+  "duration": 300,
+  "timeout_ms": 5000,
+  "max_errors": 0,
+  "max_p95_ms": 1000,
+  "replicas": []
+}

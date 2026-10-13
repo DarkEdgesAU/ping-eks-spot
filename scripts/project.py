@@ -82,7 +82,10 @@ def routing_colour():
     return value
 
 def common_values(c):
+    base_attribute, base_value = c['base_dn'].split(',', 1)[0].split('=', 1)
     envs = {
+        'BASE_ATTRIBUTE': base_attribute, 'BASE_VALUE': base_value,
+        'BASE_CLASS': 'domain' if base_attribute == 'dc' else 'organization',
         'PING_IDENTITY_ACCEPT_EULA': 'YES' if c['accept_eula'] else 'NO',
         'USER_BASE_DN': c['base_dn'], 'MAX_HEAP_SIZE': '4g',
         'ROOT_USER_DN': 'cn=administrator', 'MAKELDIF_USERS': '0',
@@ -102,17 +105,24 @@ def common_values(c):
     return {
         'global': {'image': {'tag': c['base_image_tag']}, 'envs': envs,
                    'rbac': {'serviceAccountName': 'ping-runtime', 'applyServiceAccountToWorkload': True},
-                   'includeInitContainers': ['read-availability-zone'],
-                   'includeVolumes': ['runtime-zone', 'runtime-secrets'],
+                   'includeInitContainers': ['prepare-runtime', 'read-availability-zone'],
+                   'includeVolumes': ['runtime-zone', 'runtime-secrets', 'runtime-secret-files'],
                    'volumeMounts': [{'name': 'runtime-zone', 'mountPath': '/runtime'},
-                                    {'name': 'runtime-secrets', 'mountPath': '/run/ping-secrets', 'readOnly': True}],
+                                    {'name': 'runtime-secret-files', 'mountPath': '/run/ping-secrets', 'readOnly': True}],
                    'workload': {'podDisruptionBudget': {'enabled': True, 'minAvailable': 2},
                        'topologySpreadConstraints': [
                            {'maxSkew': 1, 'topologyKey': 'topology.kubernetes.io/zone', 'whenUnsatisfiable': 'DoNotSchedule'},
                            {'maxSkew': 1, 'topologyKey': 'kubernetes.io/hostname', 'whenUnsatisfiable': 'DoNotSchedule'}]}},
-        'initContainers': {'read-availability-zone': zone_reader},
+        'initContainers': {'read-availability-zone': zone_reader, 'prepare-runtime': {
+            'name': 'prepare-runtime', 'image': 'pingidentity/pingtoolkit:2609',
+            'command': ['sh', '-ec'], 'args': [(ROOT/'scripts/prepare_runtime.sh').read_text()],
+            'securityContext': {'runAsUser': 9031, 'runAsGroup': 0, 'allowPrivilegeEscalation': False},
+            'volumeMounts': [{'name': 'runtime-secrets', 'mountPath': '/run/projected-secrets', 'readOnly': True},
+                             {'name': 'runtime-secret-files', 'mountPath': '/run/ping-secrets'},
+                             {'name': 'out-dir', 'mountPath': '/opt/out'}]}},
         'volumes': {'runtime-zone': {'emptyDir': {}},
-                    'runtime-secrets': {'secret': {'secretName': 'pd-runtime'}}},
+                    'runtime-secrets': {'secret': {'secretName': 'pd-runtime'}},
+                    'runtime-secret-files': {'emptyDir': {'medium': 'Memory'}}},
     }
 
 def values(c, target, repositories=None):
@@ -274,7 +284,7 @@ def secrets(c):
     print('Development secrets installed. No private keys or credentials are saved in the project archive.')
 
 def dsconfig(pod, extra):
-    run(['kubectl','-n','identity-proxy','exec',pod,'--','dsconfig','--hostname','localhost','--port','1636',
+    run(['kubectl','-n','identity-proxy','exec',pod,'-c','pingdirectoryproxy','--','dsconfig','--noPropertiesFile','--hostname','localhost','--port','1636',
          '--useSSL','--trustStorePath','/run/ping-secrets/truststore.p12','--trustStorePasswordFile','/run/ping-secrets/truststore.pin',
          '--bindDN','cn=administrator','--bindPasswordFile','/run/ping-secrets/root-user-password','--no-prompt',*extra])
 
