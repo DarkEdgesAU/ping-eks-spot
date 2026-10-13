@@ -6,17 +6,17 @@ The packaged default runs directory and proxy workloads on **Spot**. Each direct
 
 ## Included layout
 
-| Path | Purpose |
-| --- | --- |
-| `terraform/` | VPC, per-AZ networking and Spot groups, EKS, access, Pod Identity, EBS driver, ECR |
-| `profiles/pingdirectory/` | Editable server profile, base DN, assurance example and AZ setup hook |
-| `profiles/pingdirectoryproxy/` | Trusted TLS backends and explicit blue/green routing |
-| `images/` | Bake profiles into versioned Ping images; no Git credentials needed in pods |
-| `scripts/project.py` | Render/deploy, secrets, image builds, status, gated promotion |
-| `.devcontainer/` | Linux x86-64 development tools for a remote VS Code/Docker host |
-| `AGENTS.md` | Project instructions for Codex |
-| `tests/` | Promotion boundary tests |
-| `docs/` | Architecture, cutover/recovery runbook and production acceptance work |
+| Path                           | Purpose                                                                            |
+| ------------------------------ | ---------------------------------------------------------------------------------- |
+| `terraform/`                   | VPC, per-AZ networking and Spot groups, EKS, access, Pod Identity, EBS driver, ECR |
+| `profiles/pingdirectory/`      | Editable server profile, base DN, assurance example and AZ setup hook              |
+| `profiles/pingdirectoryproxy/` | Trusted TLS backends and explicit blue/green routing                               |
+| `images/`                      | Bake profiles into versioned Ping images; no Git credentials needed in pods        |
+| `scripts/project.py`           | Render/deploy, secrets, image builds, status, gated promotion                      |
+| `.devcontainer/`               | Linux x86-64 development tools for a remote VS Code/Docker host                    |
+| `AGENTS.md`                    | Project instructions for Codex                                                     |
+| `tests/`                       | Promotion boundary tests                                                           |
+| `docs/`                        | Architecture, cutover/recovery runbook and production acceptance work              |
 
 Baseline: Ping chart **0.16.0**, DevOps images **2609**, PingDirectory/Proxy **11.1.0.1**. Terraform **1.13.5**, Helm **3.19.0**, EKS/Kubectl **1.35**. The chart is vendored with its official SHA-256 checked before rendering. The AWS provider is recorded in `terraform/.terraform.lock.hcl` after validation. Keep version changes deliberate; `latest` is not an image tag in the project.
 
@@ -118,3 +118,19 @@ and reconciles acknowledged writes directly against all six directory replicas.
 > Read AGENTS.md, README.md and docs/ROADMAP.md. Review the Terraform plan and profile lifecycle against the pinned Ping images. Implement a live validation command that checks every replicated base DN, verifies each server's AZ location, and reconciles acknowledged LDAPS test writes across both colours. Keep validation and deployment separate, and do not apply AWS changes without my instruction.
 
 See [docs/VALIDATION.md](docs/VALIDATION.md) for checks performed while creating this package and the remaining runtime limitations.
+
+## Diagrams
+
+### KubeDiagram
+
+```console
+kubectl get all,ingress,pvc,sc,configmap,secrets,pvc,node,ServiceAccount,PersistentVolume,CSIDriver -n identity-proxy -o yaml | docker run --rm
+ -i -v ${PWD}:/work philippemerle/kubediagrams kube-diagrams -o /work/eks-architecture.png -
+ ```
+
+### Terravision
+
+ ```console
+ terravision draw --source terraform
+ ```
+ 
