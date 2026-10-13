@@ -126,7 +126,7 @@ def values(c, colour, repository=None):
     secret_items += [{'key':'var.'+name,'path':'vars/'+name}
                      for name in (*mapping,'PING_IDENTITY_PASSWORD','PF_CLUSTER_PASSWORD')]
     v = {'global':{'image':{'tag':c['base_image_tag']},'envs':env,
-        'includeInitContainers':['copy-federate-secrets'],
+        'includeInitContainers':['copy-federate-secrets','wait-for-directory-proxy'],
         'includeVolumes':['pf-projected','pf-secrets'],
         'volumeMounts':[{'name':'pf-secrets','mountPath':'/run/ping-secrets','readOnly':True}]},
         'volumes':{'pf-projected':{'secret':{'secretName':f'pf-{colour}-runtime','items':secret_items}},
@@ -136,7 +136,12 @@ def values(c, colour, repository=None):
             'command':['sh','-ec'], 'args':['umask 077; for source in /run/projected/*; do cp -RL "$source" /run/ping-secrets/; done; find /run/ping-secrets -mindepth 1 -type f -exec chmod 600 {} +; find /run/ping-secrets -mindepth 1 -type d -exec chmod 700 {} +'],
             'securityContext':{'runAsUser':9031,'runAsGroup':0,'allowPrivilegeEscalation':False},
             'volumeMounts':[{'name':'pf-projected','mountPath':'/run/projected','readOnly':True},
-                            {'name':'pf-secrets','mountPath':'/run/ping-secrets'}]}}}
+                            {'name':'pf-secrets','mountPath':'/run/ping-secrets'}]},
+            'wait-for-directory-proxy':{
+                'name':'wait-for-directory-proxy','image':f'pingidentity/pingtoolkit:{c["base_image_tag"]}',
+                'command':['sh','-ec'],'args':[(ROOT/'scripts/wait_for_directory_proxy.sh').read_text()],
+                'securityContext':{'runAsUser':9031,'runAsGroup':0,'allowPrivilegeEscalation':False},
+                'volumeMounts':[{'name':'pf-secrets','mountPath':'/run/ping-secrets','readOnly':True}]}}}
     for role in ('admin','engine'):
         product = 'pingfederate-'+role
         selector = {'app.kubernetes.io/instance':f'pf-{colour}', 'app.kubernetes.io/name':product}

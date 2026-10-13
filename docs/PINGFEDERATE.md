@@ -85,6 +85,16 @@ deploy/ingress commands preserve the active colour.
 
 ## CA and TLS
 
+Every PF admin and engine waits in `wait-for-directory-proxy` after copying its
+runtime secrets. The init container connects to Directory Proxy on LDAPS 636
+and verifies its certificate/hostname using the internal CA. It retries up to
+60 times, waiting five seconds between attempts, with a ten-second connection
+timeout. After exhaustion it fails; Kubernetes retries the init container and
+PF remains stopped. This checks reachability and TLS, not an authenticated LDAP
+lookup or replication health. The wait runs at pod creation; a later proxy
+outage does not restart PF automatically. No image rebuild is needed for this
+init-container change; export, commit and sync the PF Applications.
+
 Directory and PF reuse `.secrets/ca.crt` and `ca.key`. PF gets separate CA-signed
 TLS keys per colour, a shared generated signing key, separate master/system keys
 and cluster passwords, and a generated admin password. The CA private key is

@@ -364,6 +364,36 @@ spec:
           readOnly: true
         - mountPath: /run/ping-secrets
           name: pf-secrets
+      - args:
+        - "#!/usr/bin/env sh\nset -eu\nhost=${PROXY_HOST:-pd-pingdirectoryproxy.identity-proxy.svc.cluster.local}\n\
+          port=${PROXY_PORT:-636}\nca=${PROXY_CA_FILE:-/run/ping-secrets/ca.crt}\n\
+          attempts=${PROXY_WAIT_ATTEMPTS:-60}\ndelay=${PROXY_WAIT_INTERVAL_SECONDS:-5}\n\
+          connect_timeout=${PROXY_CONNECT_TIMEOUT_SECONDS:-10}\ncommand -v openssl\
+          \ >/dev/null\ncommand -v timeout >/dev/null\ntest -s \"$ca\"\nattempt=1\n\
+          while test \"$attempt\" -le \"$attempts\"; do\n    # The Service routes\
+          \ to ready proxy endpoints. Verify its TLS identity;\n    # merely opening\
+          \ a TCP socket would also accept an untrusted server.\n    if timeout \"\
+          $connect_timeout\" openssl s_client -brief \\\n        -connect \"${host}:${port}\"\
+          \ -servername \"$host\" \\\n        -verify_hostname \"$host\" -verify_return_error\
+          \ -CAfile \"$ca\" \\\n        </dev/null >/dev/null 2>&1; then\n       \
+          \ echo \"Directory Proxy LDAPS endpoint is reachable with trusted TLS\"\n\
+          \        exit 0\n    fi\n    echo \"Waiting for Directory Proxy LDAPS (${attempt}/${attempts})\"\
+          \n    if test \"$attempt\" -lt \"$attempts\"; then sleep \"$delay\"; fi\n\
+          \    attempt=$((attempt + 1))\ndone\necho 'Directory Proxy did not become\
+          \ reachable with trusted TLS; blocking PF startup' >&2\nexit 1\n"
+        command:
+        - sh
+        - -ec
+        image: pingidentity/pingtoolkit:2609
+        name: wait-for-directory-proxy
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsGroup: 0
+          runAsUser: 9031
+        volumeMounts:
+        - mountPath: /run/ping-secrets
+          name: pf-secrets
+          readOnly: true
       nodeSelector: {}
       schedulerName: default-scheduler
       securityContext:
@@ -559,6 +589,36 @@ spec:
           readOnly: true
         - mountPath: /run/ping-secrets
           name: pf-secrets
+      - args:
+        - "#!/usr/bin/env sh\nset -eu\nhost=${PROXY_HOST:-pd-pingdirectoryproxy.identity-proxy.svc.cluster.local}\n\
+          port=${PROXY_PORT:-636}\nca=${PROXY_CA_FILE:-/run/ping-secrets/ca.crt}\n\
+          attempts=${PROXY_WAIT_ATTEMPTS:-60}\ndelay=${PROXY_WAIT_INTERVAL_SECONDS:-5}\n\
+          connect_timeout=${PROXY_CONNECT_TIMEOUT_SECONDS:-10}\ncommand -v openssl\
+          \ >/dev/null\ncommand -v timeout >/dev/null\ntest -s \"$ca\"\nattempt=1\n\
+          while test \"$attempt\" -le \"$attempts\"; do\n    # The Service routes\
+          \ to ready proxy endpoints. Verify its TLS identity;\n    # merely opening\
+          \ a TCP socket would also accept an untrusted server.\n    if timeout \"\
+          $connect_timeout\" openssl s_client -brief \\\n        -connect \"${host}:${port}\"\
+          \ -servername \"$host\" \\\n        -verify_hostname \"$host\" -verify_return_error\
+          \ -CAfile \"$ca\" \\\n        </dev/null >/dev/null 2>&1; then\n       \
+          \ echo \"Directory Proxy LDAPS endpoint is reachable with trusted TLS\"\n\
+          \        exit 0\n    fi\n    echo \"Waiting for Directory Proxy LDAPS (${attempt}/${attempts})\"\
+          \n    if test \"$attempt\" -lt \"$attempts\"; then sleep \"$delay\"; fi\n\
+          \    attempt=$((attempt + 1))\ndone\necho 'Directory Proxy did not become\
+          \ reachable with trusted TLS; blocking PF startup' >&2\nexit 1\n"
+        command:
+        - sh
+        - -ec
+        image: pingidentity/pingtoolkit:2609
+        name: wait-for-directory-proxy
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsGroup: 0
+          runAsUser: 9031
+        volumeMounts:
+        - mountPath: /run/ping-secrets
+          name: pf-secrets
+          readOnly: true
       nodeSelector: {}
       schedulerName: default-scheduler
       securityContext:

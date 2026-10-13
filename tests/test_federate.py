@@ -3,6 +3,9 @@ import json
 from pathlib import Path
 import sys
 import unittest
+import os
+import subprocess
+import tempfile
 from unittest.mock import patch
 import yaml
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
@@ -13,6 +16,31 @@ import project
 class FederateTests(unittest.TestCase):
     def setUp(self):
         self.config=json.loads((project.ROOT/'federate.example.json').read_text())
+
+    def test_proxy_wait_retries_and_blocks_startup_on_exhaustion(self):
+        # Exercise retry/error control flow without making LDAP/TLS requests.
+        wrapper='''
+COUNT=0
+openssl() { printf '%s\\n' "$*" >> "$ATTEMPTS_FILE"; COUNT=$((COUNT + 1)); test "$COUNT" -gt "$FAIL_ATTEMPTS"; }
+timeout() { shift; "$@"; }
+sleep() { :; }
+. "$WAIT_SCRIPT"
+'''
+        for failures,expected in ((2,0),(99,1)):
+            with tempfile.TemporaryDirectory() as directory:
+                root=Path(directory)
+                ca=root/'ca.crt'; ca.write_text('fixture-only')
+                attempts=root/'attempts.txt'
+                env={**os.environ,'PROXY_CA_FILE':ca.as_posix(),'PROXY_WAIT_ATTEMPTS':'3',
+                     'FAIL_ATTEMPTS':str(failures),'ATTEMPTS_FILE':attempts.as_posix(),
+                     'WAIT_SCRIPT':(project.ROOT/'scripts/wait_for_directory_proxy.sh').as_posix()}
+                result=subprocess.run([project.profile_shell(),'-c',wrapper],env=env,text=True,capture_output=True)
+                self.assertEqual(result.returncode,expected,result.stderr)
+                calls=attempts.read_text().splitlines()
+                self.assertEqual(len(calls),3)
+                self.assertIn('-verify_hostname pd-pingdirectoryproxy.identity-proxy.svc.cluster.local',calls[0])
+                self.assertIn('-verify_return_error',calls[0])
+                self.assertIn('reachable with trusted TLS' if expected==0 else 'blocking PF startup',result.stdout+result.stderr)
 
     def evidence(self):
         return {'cluster_name':project.config()['cluster_name'],'target_colour':'green',
@@ -55,6 +83,11 @@ class FederateTests(unittest.TestCase):
             engine=next(x for x in docs if x['kind']=='Deployment')
             self.assertEqual(engine['spec']['replicas'],3)
             pod=engine['spec']['template']['spec']
+            for workload in (admin,engine):
+                init=workload['spec']['template']['spec']['initContainers']
+                names=[item['name'] for item in init]
+                self.assertIn('wait-for-directory-proxy',names)
+                self.assertLess(names.index('copy-federate-secrets'),names.index('wait-for-directory-proxy'))
             self.assertEqual({x['topologyKey'] for x in pod['topologySpreadConstraints']},
                 {'topology.kubernetes.io/zone','kubernetes.io/hostname'})
             for constraint in pod['topologySpreadConstraints']:
