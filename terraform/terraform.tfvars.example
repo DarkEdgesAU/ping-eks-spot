@@ -7,3 +7,4 @@ api_public_access_cidrs = ["203.0.113.10/32"] # Replace with remote host egress 
 spot_desired_per_az = 2
 spot_max_per_az = 4
 enable_on_demand = false
+enable_federate = false # Set true to provision ALB controller Pod Identity integration.

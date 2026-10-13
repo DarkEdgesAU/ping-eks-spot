@@ -161,7 +161,7 @@ resource "aws_eks_addon" "ebs" {
   depends_on                  = [aws_eks_addon.core, aws_eks_pod_identity_association.ebs, aws_iam_role_policy_attachment.ebs]
 }
 resource "aws_ecr_repository" "images" {
-  for_each             = toset(["pingdirectory", "pingdirectoryproxy"])
+  for_each             = toset(["pingdirectory", "pingdirectoryproxy", "pingfederate"])
   name                 = "${var.cluster_name}/${each.key}"
   image_tag_mutability = "IMMUTABLE"
   force_delete         = false

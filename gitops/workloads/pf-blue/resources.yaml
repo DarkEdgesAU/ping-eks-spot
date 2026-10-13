@@ -1,0 +1,635 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  annotations: null
+  labels:
+    app.kubernetes.io/instance: pf-blue
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingfederate-engine
+    helm.sh/chart: ping-devops-0.16.0
+  name: pf-blue-pingfederate-engine
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: pf-blue
+      app.kubernetes.io/name: pingfederate-engine
+---
+apiVersion: v1
+data:
+  LICENSE_DIR: /run/ping-secrets
+  PA_ADMIN_PRIVATE_HOSTNAME: pf-blue-pingaccess-admin
+  PA_ADMIN_PRIVATE_PORT_CLUSTERCONFIG: '9090'
+  PA_ADMIN_PRIVATE_PORT_HTTPS: '9000'
+  PA_ADMIN_PUBLIC_HOSTNAME: localhost
+  PA_ADMIN_PUBLIC_PORT_HTTPS: '9000'
+  PA_ENGINE_PRIVATE_HOSTNAME: pf-blue-pingaccess-engine
+  PA_ENGINE_PRIVATE_PORT_HTTPS: '3000'
+  PA_ENGINE_PUBLIC_HOSTNAME: localhost
+  PA_ENGINE_PUBLIC_PORT_HTTPS: '3000'
+  PAZ_ENGINE_PRIVATE_HOSTNAME: pf-blue-pingauthorize
+  PAZ_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PAZ_ENGINE_PUBLIC_HOSTNAME: localhost
+  PAZ_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PAZP_ENGINE_PRIVATE_HOSTNAME: pf-blue-pingauthorizepap
+  PAZP_ENGINE_PRIVATE_PORT_HTTPS: '8443'
+  PAZP_ENGINE_PUBLIC_HOSTNAME: localhost
+  PAZP_ENGINE_PUBLIC_PORT_HTTPS: '8443'
+  PD_CONSOLE_PRIVATE_HOSTNAME: pf-blue-pingdataconsole
+  PD_CONSOLE_PRIVATE_PORT_HTTPS: '8443'
+  PD_CONSOLE_PUBLIC_HOSTNAME: localhost
+  PD_CONSOLE_PUBLIC_PORT_HTTPS: '8443'
+  PD_DELEGATOR_PRIVATE_HOSTNAME: pf-blue-pingdelegator
+  PD_DELEGATOR_PRIVATE_PORT_HTTPS: '6443'
+  PD_DELEGATOR_PUBLIC_HOSTNAME: localhost
+  PD_DELEGATOR_PUBLIC_PORT_HTTPS: '6443'
+  PD_ENGINE_PRIVATE_HOSTNAME: pd-pingdirectoryproxy.identity-proxy.svc.cluster.local
+  PD_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PD_ENGINE_PRIVATE_PORT_LDAP: '636'
+  PD_ENGINE_PRIVATE_PORT_LDAPS: '636'
+  PD_ENGINE_PUBLIC_HOSTNAME: localhost
+  PD_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PDP_ENGINE_PRIVATE_HOSTNAME: pf-blue-pingdirectoryproxy
+  PDP_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PDP_ENGINE_PRIVATE_PORT_LDAP: '389'
+  PDP_ENGINE_PRIVATE_PORT_LDAPS: '636'
+  PDP_ENGINE_PUBLIC_HOSTNAME: localhost
+  PDP_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PDS_ENGINE_PRIVATE_HOSTNAME: pf-blue-pingdatasync
+  PDS_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PDS_ENGINE_PUBLIC_HOSTNAME: localhost
+  PDS_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PF_ADMIN_PRIVATE_HOSTNAME: pf-blue-pingfederate-admin
+  PF_ADMIN_PRIVATE_PORT_HTTPS: '9999'
+  PF_ADMIN_PUBLIC_BASEURL: https://admin.eks.darkedges.com
+  PF_ADMIN_PUBLIC_HOSTNAME: admin.eks.darkedges.com
+  PF_ADMIN_PUBLIC_PORT_HTTPS: '443'
+  PF_CLUSTER_ADMIN_NODES_SYNC_ENABLED: 'false'
+  PF_ENGINE_PRIVATE_HOSTNAME: pf-blue-pingfederate-engine
+  PF_ENGINE_PRIVATE_PORT_HTTPS: '9031'
+  PF_ENGINE_PUBLIC_HOSTNAME: id.eks.darkedges.com
+  PF_ENGINE_PUBLIC_PORT_HTTPS: '443'
+  PF_NODE_GROUP_ID: blue
+  PING_IDENTITY_ACCEPT_EULA: 'YES'
+  ROOT_USER: Administrator
+  SECRETS_DIR: /run/ping-secrets
+  SERVER_PROFILE_URL: ''
+  USER_BASE_DN: dc=example,dc=com
+  VERBOSE: 'false'
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: pf-blue
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: global
+    helm.sh/chart: ping-devops-0.16.0
+  name: pf-blue-global-env-vars
+---
+apiVersion: v1
+data:
+  CLUSTER_BIND_ADDRESS: NON_LOOPBACK
+  CLUSTER_NAME: pf-blue
+  DNS_QUERY_LOCATION: pf-blue-pingfederate-cluster.identity-federate.svc.cluster.local
+  DNS_RECORD_TYPE: A
+  LICENSE_DIR: /run/ping-secrets
+  OPERATIONAL_MODE: CLUSTERED_CONSOLE
+  PD_ENGINE_PRIVATE_HOSTNAME: pd-pingdirectoryproxy.identity-proxy.svc.cluster.local
+  PD_ENGINE_PRIVATE_PORT_LDAP: '636'
+  PF_ADMIN_PUBLIC_BASEURL: https://admin.eks.darkedges.com
+  PF_ADMIN_PUBLIC_HOSTNAME: admin.eks.darkedges.com
+  PF_ADMIN_PUBLIC_PORT_HTTPS: '443'
+  PF_CLUSTER_ADMIN_NODES_SYNC_ENABLED: 'false'
+  PF_ENGINE_PUBLIC_HOSTNAME: id.eks.darkedges.com
+  PF_ENGINE_PUBLIC_PORT_HTTPS: '443'
+  PF_NODE_GROUP_ID: blue
+  PING_IDENTITY_ACCEPT_EULA: 'YES'
+  ROOT_USER: Administrator
+  SECRETS_DIR: /run/ping-secrets
+  SERVER_PROFILE_URL: ''
+  USER_BASE_DN: dc=example,dc=com
+  VERBOSE: 'false'
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: pf-blue
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingfederate-admin
+    helm.sh/chart: ping-devops-0.16.0
+  name: pf-blue-pingfederate-admin-env-vars
+---
+apiVersion: v1
+data:
+  CLUSTER_BIND_ADDRESS: NON_LOOPBACK
+  CLUSTER_NAME: pf-blue
+  DNS_QUERY_LOCATION: pf-blue-pingfederate-cluster.identity-federate.svc.cluster.local
+  DNS_RECORD_TYPE: A
+  LICENSE_DIR: /run/ping-secrets
+  OPERATIONAL_MODE: CLUSTERED_ENGINE
+  PD_ENGINE_PRIVATE_HOSTNAME: pd-pingdirectoryproxy.identity-proxy.svc.cluster.local
+  PD_ENGINE_PRIVATE_PORT_LDAP: '636'
+  PF_ADMIN_PORT: '9999'
+  PF_ADMIN_PUBLIC_BASEURL: https://admin.eks.darkedges.com
+  PF_ADMIN_PUBLIC_HOSTNAME: admin.eks.darkedges.com
+  PF_ADMIN_PUBLIC_PORT_HTTPS: '443'
+  PF_CLUSTER_ADMIN_NODES_SYNC_ENABLED: 'false'
+  PF_ENGINE_PUBLIC_HOSTNAME: id.eks.darkedges.com
+  PF_ENGINE_PUBLIC_PORT_HTTPS: '443'
+  PF_NODE_GROUP_ID: blue
+  PING_IDENTITY_ACCEPT_EULA: 'YES'
+  ROOT_USER: Administrator
+  SECRETS_DIR: /run/ping-secrets
+  SERVER_PROFILE_URL: ''
+  USER_BASE_DN: dc=example,dc=com
+  VERBOSE: 'false'
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: pf-blue
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingfederate-engine
+    helm.sh/chart: ping-devops-0.16.0
+  name: pf-blue-pingfederate-engine-env-vars
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: null
+  labels:
+    app.kubernetes.io/instance: pf-blue
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingfederate-admin
+    helm.sh/chart: ping-devops-0.16.0
+  name: pf-blue-pingfederate-admin
+spec:
+  ports:
+  - name: https
+    port: 9999
+    protocol: TCP
+    targetPort: 9999
+  selector:
+    app.kubernetes.io/instance: pf-blue
+    app.kubernetes.io/name: pingfederate-admin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: 'true'
+  labels:
+    app.kubernetes.io/instance: pf-blue
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingfederate-admin
+    helm.sh/chart: ping-devops-0.16.0
+  name: pf-blue-pingfederate-cluster
+spec:
+  clusterIP: None
+  ports:
+  - name: clusterbind
+    port: 7600
+    protocol: TCP
+  - name: clusterfail
+    port: 7700
+    protocol: TCP
+  publishNotReadyAddresses: true
+  selector:
+    clusterIdentifier: pf-blue-pingfederate
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: null
+  labels:
+    app.kubernetes.io/instance: pf-blue
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingfederate-engine
+    helm.sh/chart: ping-devops-0.16.0
+  name: pf-blue-pingfederate-engine
+spec:
+  ports:
+  - name: https
+    port: 9031
+    protocol: TCP
+    targetPort: 9031
+  selector:
+    app.kubernetes.io/instance: pf-blue
+    app.kubernetes.io/name: pingfederate-engine
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations: null
+  labels:
+    app.kubernetes.io/instance: pf-blue
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingfederate-engine
+    helm.sh/chart: ping-devops-0.16.0
+  name: pf-blue-pingfederate-engine
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: pf-blue
+      app.kubernetes.io/name: pingfederate-engine
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: e204d9bfe06e660375100c0654ce009f3981bac9d9180a9e9e0ae1315c3ad9c9
+      labels:
+        app.kubernetes.io/instance: pf-blue
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: pingfederate-engine
+        clusterIdentifier: pf-blue-pingfederate
+        helm.sh/chart: ping-devops-0.16.0
+    spec:
+      affinity: {}
+      containers:
+      - args: null
+        envFrom:
+        - configMapRef:
+            name: pf-blue-global-env-vars
+            optional: true
+        - configMapRef:
+            name: pf-blue-env-vars
+            optional: true
+        - configMapRef:
+            name: pf-blue-pingfederate-engine-env-vars
+        - secretRef:
+            name: devops-secret
+            optional: true
+        - secretRef:
+            name: pf-blue-pingfederate-engine-git-secret
+            optional: true
+        image: 447061058131.dkr.ecr.ap-southeast-2.amazonaws.com/pd-spot-dev/pingfederate:pf-v1
+        imagePullPolicy: IfNotPresent
+        lifecycle: {}
+        livenessProbe:
+          exec:
+            command:
+            - /opt/liveness.sh
+          failureThreshold: 4
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: pingfederate-engine
+        ports:
+        - containerPort: 7600
+          name: clusterbind
+        - containerPort: 7700
+          name: clusterfail
+        - containerPort: 9031
+          name: https
+        readinessProbe:
+          exec:
+            command:
+            - /opt/readiness.sh
+          failureThreshold: 4
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: 2
+            memory: 4Gi
+          requests:
+            cpu: 500m
+            memory: 2Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        startupProbe:
+          exec:
+            command:
+            - /opt/liveness.sh
+          failureThreshold: 90
+          periodSeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /run/ping-secrets
+          name: pf-secrets
+          readOnly: true
+      enableServiceLinks: true
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - echo "Waiting for pf-blue-pingfederate-admin:"9999"..." && wait-for pf-blue-pingfederate-admin:"9999"
+          -t 300 -- echo "pf-blue-pingfederate-admin:"9999" running"
+        image: pingidentity/pingtoolkit:2609
+        imagePullPolicy: IfNotPresent
+        name: wait-for-pingfederate-admin
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 1m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: true
+          runAsUser: 9031
+          seccompProfile:
+            type: RuntimeDefault
+      - args:
+        - umask 077; cp -RL /run/projected/. /run/ping-secrets/; chmod -R go-rwx /run/ping-secrets
+        command:
+        - sh
+        - -ec
+        image: pingidentity/pingtoolkit:2609
+        name: copy-federate-secrets
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsGroup: 0
+          runAsUser: 9031
+        volumeMounts:
+        - mountPath: /run/projected
+          name: pf-projected
+          readOnly: true
+        - mountPath: /run/ping-secrets
+          name: pf-secrets
+      nodeSelector: {}
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 0
+        runAsGroup: 0
+        runAsNonRoot: true
+        runAsUser: 9031
+        seccompProfile:
+          type: RuntimeDefault
+      shareProcessNamespace: false
+      terminationGracePeriodSeconds: 120
+      tolerations: []
+      topologySpreadConstraints:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: pf-blue
+            app.kubernetes.io/name: pingfederate-engine
+        maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: pf-blue
+            app.kubernetes.io/name: pingfederate-engine
+        maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+      volumes:
+      - name: pf-projected
+        secret:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          - key: PingFederate.lic
+            path: PingFederate.lic
+          - key: pf.jwk
+            path: pf.jwk
+          - key: var.dataStores_items_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_password
+            path: vars/dataStores_items_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_password
+          - key: var.PRIVATE_KEYSTORE
+            path: vars/PRIVATE_KEYSTORE
+          - key: var.PRIVATE_KEYSTORE_PIN
+            path: vars/PRIVATE_KEYSTORE_PIN
+          - key: var.passwordCredentialValidators_items_simple_configuration_tables_rows_fields_Password_value
+            path: vars/passwordCredentialValidators_items_simple_configuration_tables_rows_fields_Password_value
+          - key: var.certificates_ca_items_50z1hm968rdu2irr31i5ridbh_50z1hm968rdu2irr31i5ridbh_fileData
+            path: vars/certificates_ca_items_50z1hm968rdu2irr31i5ridbh_50z1hm968rdu2irr31i5ridbh_fileData
+          - key: var.keyPairs_signing_items_devsigningcert_devsigningcert_fileData
+            path: vars/keyPairs_signing_items_devsigningcert_devsigningcert_fileData
+          - key: var.keyPairs_signing_items_devsigningcert_devsigningcert_password
+            path: vars/keyPairs_signing_items_devsigningcert_devsigningcert_password
+          - key: var.serverSettings_systemKeys_items_current_keyData
+            path: vars/serverSettings_systemKeys_items_current_keyData
+          - key: var.serverSettings_systemKeys_items_pending_keyData
+            path: vars/serverSettings_systemKeys_items_pending_keyData
+          - key: var.sp_idpConnections_items_aLGfLX1_K4VP6a3uGh33YOuZodG_credentials_certs_x509File_a5kvb66kyxbmdfwp506gijvn6_a5kvb66kyxbmdfwp506gijvn6_fileData
+            path: vars/sp_idpConnections_items_aLGfLX1_K4VP6a3uGh33YOuZodG_credentials_certs_x509File_a5kvb66kyxbmdfwp506gijvn6_a5kvb66kyxbmdfwp506gijvn6_fileData
+          - key: var.dataStores_items_ProvisionerDS_ProvisionerDS_password
+            path: vars/dataStores_items_ProvisionerDS_ProvisionerDS_password
+          - key: var.passwordCredentialValidators_items_simple_configuration_tables_rows_fields_Confirm_Password_value
+            path: vars/passwordCredentialValidators_items_simple_configuration_tables_rows_fields_Confirm_Password_value
+          - key: var.administrativeAccounts_items_Administrator_password
+            path: vars/administrativeAccounts_items_Administrator_password
+          - key: var.PING_IDENTITY_PASSWORD
+            path: vars/PING_IDENTITY_PASSWORD
+          - key: var.PF_CLUSTER_PASSWORD
+            path: vars/PF_CLUSTER_PASSWORD
+          secretName: pf-blue-runtime
+      - emptyDir:
+          medium: Memory
+        name: pf-secrets
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    app.kubernetes.io/instance: pf-blue
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingfederate-admin
+    helm.sh/chart: ping-devops-0.16.0
+  name: pf-blue-pingfederate-admin
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: pf-blue
+      app.kubernetes.io/name: pingfederate-admin
+  serviceName: pf-blue-pingfederate-cluster
+  template:
+    metadata:
+      annotations:
+        checksum/config: 5acc6a55a5454f645a06f66502d0c43165782c3a6bd902016785df5c9e2681cb
+      labels:
+        app.kubernetes.io/instance: pf-blue
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: pingfederate-admin
+        clusterIdentifier: pf-blue-pingfederate
+        helm.sh/chart: ping-devops-0.16.0
+    spec:
+      affinity: {}
+      containers:
+      - args: null
+        envFrom:
+        - configMapRef:
+            name: pf-blue-global-env-vars
+            optional: true
+        - configMapRef:
+            name: pf-blue-env-vars
+            optional: true
+        - configMapRef:
+            name: pf-blue-pingfederate-admin-env-vars
+        - secretRef:
+            name: devops-secret
+            optional: true
+        - secretRef:
+            name: pf-blue-pingfederate-admin-git-secret
+            optional: true
+        image: 447061058131.dkr.ecr.ap-southeast-2.amazonaws.com/pd-spot-dev/pingfederate:pf-v1
+        imagePullPolicy: IfNotPresent
+        lifecycle: {}
+        livenessProbe:
+          exec:
+            command:
+            - /opt/liveness.sh
+          failureThreshold: 4
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: pingfederate-admin
+        ports:
+        - containerPort: 7600
+          name: clusterbind
+        - containerPort: 7700
+          name: clusterfail
+        - containerPort: 9999
+          name: https
+        readinessProbe:
+          exec:
+            command:
+            - /opt/readiness.sh
+          failureThreshold: 4
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: 2
+            memory: 4Gi
+          requests:
+            cpu: 500m
+            memory: 2Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        startupProbe:
+          exec:
+            command:
+            - /opt/liveness.sh
+          failureThreshold: 90
+          periodSeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /run/ping-secrets
+          name: pf-secrets
+          readOnly: true
+        - mountPath: /opt/out
+          name: out-dir
+      enableServiceLinks: true
+      initContainers:
+      - args:
+        - umask 077; cp -RL /run/projected/. /run/ping-secrets/; chmod -R go-rwx /run/ping-secrets
+        command:
+        - sh
+        - -ec
+        image: pingidentity/pingtoolkit:2609
+        name: copy-federate-secrets
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsGroup: 0
+          runAsUser: 9031
+        volumeMounts:
+        - mountPath: /run/projected
+          name: pf-projected
+          readOnly: true
+        - mountPath: /run/ping-secrets
+          name: pf-secrets
+      nodeSelector: {}
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 0
+        runAsGroup: 0
+        runAsNonRoot: true
+        runAsUser: 9031
+        seccompProfile:
+          type: RuntimeDefault
+      shareProcessNamespace: false
+      terminationGracePeriodSeconds: 120
+      tolerations: []
+      topologySpreadConstraints: null
+      volumes:
+      - name: pf-projected
+        secret:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          - key: PingFederate.lic
+            path: PingFederate.lic
+          - key: pf.jwk
+            path: pf.jwk
+          - key: var.dataStores_items_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_password
+            path: vars/dataStores_items_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_LDAP_D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3_password
+          - key: var.PRIVATE_KEYSTORE
+            path: vars/PRIVATE_KEYSTORE
+          - key: var.PRIVATE_KEYSTORE_PIN
+            path: vars/PRIVATE_KEYSTORE_PIN
+          - key: var.passwordCredentialValidators_items_simple_configuration_tables_rows_fields_Password_value
+            path: vars/passwordCredentialValidators_items_simple_configuration_tables_rows_fields_Password_value
+          - key: var.certificates_ca_items_50z1hm968rdu2irr31i5ridbh_50z1hm968rdu2irr31i5ridbh_fileData
+            path: vars/certificates_ca_items_50z1hm968rdu2irr31i5ridbh_50z1hm968rdu2irr31i5ridbh_fileData
+          - key: var.keyPairs_signing_items_devsigningcert_devsigningcert_fileData
+            path: vars/keyPairs_signing_items_devsigningcert_devsigningcert_fileData
+          - key: var.keyPairs_signing_items_devsigningcert_devsigningcert_password
+            path: vars/keyPairs_signing_items_devsigningcert_devsigningcert_password
+          - key: var.serverSettings_systemKeys_items_current_keyData
+            path: vars/serverSettings_systemKeys_items_current_keyData
+          - key: var.serverSettings_systemKeys_items_pending_keyData
+            path: vars/serverSettings_systemKeys_items_pending_keyData
+          - key: var.sp_idpConnections_items_aLGfLX1_K4VP6a3uGh33YOuZodG_credentials_certs_x509File_a5kvb66kyxbmdfwp506gijvn6_a5kvb66kyxbmdfwp506gijvn6_fileData
+            path: vars/sp_idpConnections_items_aLGfLX1_K4VP6a3uGh33YOuZodG_credentials_certs_x509File_a5kvb66kyxbmdfwp506gijvn6_a5kvb66kyxbmdfwp506gijvn6_fileData
+          - key: var.dataStores_items_ProvisionerDS_ProvisionerDS_password
+            path: vars/dataStores_items_ProvisionerDS_ProvisionerDS_password
+          - key: var.passwordCredentialValidators_items_simple_configuration_tables_rows_fields_Confirm_Password_value
+            path: vars/passwordCredentialValidators_items_simple_configuration_tables_rows_fields_Confirm_Password_value
+          - key: var.administrativeAccounts_items_Administrator_password
+            path: vars/administrativeAccounts_items_Administrator_password
+          - key: var.PING_IDENTITY_PASSWORD
+            path: vars/PING_IDENTITY_PASSWORD
+          - key: var.PF_CLUSTER_PASSWORD
+            path: vars/PF_CLUSTER_PASSWORD
+          secretName: pf-blue-runtime
+      - emptyDir:
+          medium: Memory
+        name: pf-secrets
+      - name: out-dir
+        persistentVolumeClaim:
+          claimName: out-dir
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - metadata:
+      annotations: {}
+      name: out-dir
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: pingdirectory-ebs
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain

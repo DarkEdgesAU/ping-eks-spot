@@ -8,6 +8,10 @@ The initial deployment is a development environment. It does not establish a pro
 
 ## Next implementation gates
 
+Argo CD bootstrap and protected GitOps exports are documented in
+[ARGOCD.md](ARGOCD.md). Live Helm adoption, ordered sync, Cloudflare Access and
+ALB ingress testing remain acceptance gates.
+
 1. Run a licensed deployment and validate profile commands, stock replication bootstrap, three AZ locations, TLS trust and permissions. Container lifecycle commands cannot be exercised offline with Helm rendering alone.
 2. Replace the shared development key/certificate and administrative proxy bind with the organization's per-instance certificate lifecycle and least-privilege proxy bind identity.
 3. Automate LDAP write probes and acknowledged-write reconciliation; capture reports for every replicated base DN. Replace manual promotion attestations with machine-verifiable candidate/image evidence.
@@ -20,6 +24,12 @@ The initial deployment is a development environment. It does not establish a pro
 10. Validate each major-version transition separately; enable new-version-only features after the old colour is retired. Replicated schema/data changes affect both colours.
 
 ## Spot behavior
+
+PingFederate blue/green rendering, profile bootstrap, ALB ingress, and isolated
+configuration Terraform are described in [PINGFEDERATE.md](PINGFEDERATE.md).
+Licensed baseline import, runtime cluster encryption, session/token continuity,
+Cloudflare admin-origin protection, and ALB cutover testing remain acceptance
+gates; offline validation does not establish them.
 
 Each node group is confined to one AZ so a replacement node can attach an existing EBS volume there. Multiple compatible instance types diversify allocation. AWS managed groups use Capacity Rebalancing and handle interruption notices, but notice and orderly completion are not guaranteed. A PDB does not fence an isolated writer or prevent termination. Empty Spot capacity in an AZ can delay attachment/recovery; the other two AZs must be sized to carry traffic.
 

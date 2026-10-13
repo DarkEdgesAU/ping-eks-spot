@@ -13,12 +13,49 @@ setup:
 	$(PYTHON) -c "from pathlib import Path; import shutil; p = Path('config.json'); shutil.copyfile('config.example.json', p) if not p.exists() else None"
 validate:
 	$(PYTHON) scripts/project.py validate
+	$(PYTHON) scripts/federate.py validate
+	$(PYTHON) scripts/gitops.py validate
 	$(PYTHON) -m unittest discover -s tests -v
 terraform-init:
 	terraform -chdir=terraform init
+	terraform -chdir=terraform-federate init
 terraform-check:
 	terraform -chdir=terraform fmt -check -recursive
 	terraform -chdir=terraform validate
+	terraform -chdir=terraform-federate fmt -check -recursive
+	terraform -chdir=terraform-federate validate
+
+.PHONY: pf-render pf-secrets pf-build-image pf-deploy pf-ingress pf-promote pf-status
+pf-controller:
+	$(PYTHON) scripts/federate.py install-controller
+pf-render:
+	$(PYTHON) scripts/federate.py render --target $(TARGET)
+pf-secrets:
+	$(PYTHON) scripts/federate.py secrets
+pf-build-image:
+	$(PYTHON) scripts/federate.py build-image --target $(TARGET)
+pf-deploy:
+	$(PYTHON) scripts/federate.py deploy --target $(TARGET)
+pf-ingress:
+	$(PYTHON) scripts/federate.py ingress
+pf-promote:
+	$(PYTHON) scripts/federate.py promote --target $(TARGET) --evidence "$(EVIDENCE)"
+pf-status:
+	$(PYTHON) scripts/federate.py status
+
+.PHONY: gitops-export argocd-render argocd-secrets argocd-bootstrap argocd-ingress argocd-applications
+gitops-export:
+	$(PYTHON) scripts/gitops.py export
+argocd-render:
+	$(PYTHON) scripts/gitops.py render
+argocd-secrets:
+	$(PYTHON) scripts/gitops.py secrets
+argocd-bootstrap:
+	$(PYTHON) scripts/gitops.py bootstrap
+argocd-ingress:
+	$(PYTHON) scripts/gitops.py bootstrap --public
+argocd-applications:
+	$(PYTHON) scripts/gitops.py applications
 plan:
 	$(PYTHON) -c "from pathlib import Path; Path('build').mkdir(exist_ok=True)"
 	terraform -chdir=terraform plan -out=../build/infrastructure.tfplan

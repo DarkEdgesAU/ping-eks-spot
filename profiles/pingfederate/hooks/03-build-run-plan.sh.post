@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+set -eu
+set +x
+for file in /run/ping-secrets/vars/*; do
+    test -f "$file" || continue
+    name=$(basename "$file")
+    case "$name" in *[!A-Za-z0-9_]*|'') exit 1;; esac
+    value=$(cat "$file")
+    case "$value" in *"'"*) echo 'Invalid generated secret encoding' >&2; exit 1;; esac
+    printf "export %s='%s'\n" "$name" "$value" >> "$CONTAINER_ENV"
+done
+mkdir -p "$STAGING_DIR/instance/server/default/data"
+cp /run/ping-secrets/pf.jwk "$STAGING_DIR/instance/server/default/data/pf.jwk"
+chmod 600 "$STAGING_DIR/instance/server/default/data/pf.jwk"
+printf '\nPF_ENGINE_BASE_URL=%s\nPD_DELEGATOR_URL=%s\n' \
+  "${PF_ENGINE_PUBLIC_HOSTNAME}:443" "${PF_ENGINE_PUBLIC_HOSTNAME}:443" >> "$CONTAINER_ENV"

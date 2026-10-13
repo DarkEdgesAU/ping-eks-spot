@@ -18,4 +18,5 @@ jobs:
           version: 'v3.19.0'
       - run: make setup validate
       - run: terraform -chdir=terraform init -backend=false -input=false
+      - run: terraform -chdir=terraform-federate init -backend=false -input=false
       - run: make terraform-check
