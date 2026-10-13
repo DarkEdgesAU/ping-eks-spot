@@ -346,7 +346,9 @@ spec:
           seccompProfile:
             type: RuntimeDefault
       - args:
-        - umask 077; cp -RL /run/projected/. /run/ping-secrets/; chmod -R go-rwx /run/ping-secrets
+        - umask 077; for source in /run/projected/*; do cp -RL "$source" /run/ping-secrets/;
+          done; find /run/ping-secrets -mindepth 1 -type f -exec chmod 600 {} +; find
+          /run/ping-secrets -mindepth 1 -type d -exec chmod 700 {} +
         command:
         - sh
         - -ec
@@ -539,7 +541,9 @@ spec:
       enableServiceLinks: true
       initContainers:
       - args:
-        - umask 077; cp -RL /run/projected/. /run/ping-secrets/; chmod -R go-rwx /run/ping-secrets
+        - umask 077; for source in /run/projected/*; do cp -RL "$source" /run/ping-secrets/;
+          done; find /run/ping-secrets -mindepth 1 -type f -exec chmod 600 {} +; find
+          /run/ping-secrets -mindepth 1 -type d -exec chmod 700 {} +
         command:
         - sh
         - -ec

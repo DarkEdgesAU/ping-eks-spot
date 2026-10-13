@@ -133,7 +133,7 @@ def values(c, colour, repository=None):
                    'pf-secrets':{'emptyDir':{'medium':'Memory'}}},
         'initContainers':{'copy-federate-secrets':{
             'name':'copy-federate-secrets','image':f'pingidentity/pingtoolkit:{c["base_image_tag"]}',
-            'command':['sh','-ec'], 'args':['umask 077; cp -RL /run/projected/. /run/ping-secrets/; chmod -R go-rwx /run/ping-secrets'],
+            'command':['sh','-ec'], 'args':['umask 077; for source in /run/projected/*; do cp -RL "$source" /run/ping-secrets/; done; find /run/ping-secrets -mindepth 1 -type f -exec chmod 600 {} +; find /run/ping-secrets -mindepth 1 -type d -exec chmod 700 {} +'],
             'securityContext':{'runAsUser':9031,'runAsGroup':0,'allowPrivilegeEscalation':False},
             'volumeMounts':[{'name':'pf-projected','mountPath':'/run/projected','readOnly':True},
                             {'name':'pf-secrets','mountPath':'/run/ping-secrets'}]}}}
