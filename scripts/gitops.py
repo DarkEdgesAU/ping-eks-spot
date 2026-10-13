@@ -140,7 +140,10 @@ def export(c):
         docs=[protect(doc) for doc in yaml.safe_load_all(source.read_text()) if doc]
         folder=GITOPS/'workloads'/name
         folder.mkdir(parents=True,exist_ok=True)
-        (folder/'resources.yaml').write_text(yaml.safe_dump_all(docs,sort_keys=False),newline='\n')
+        output=folder/'resources.yaml'
+        rendered=yaml.safe_dump_all(docs,sort_keys=False)
+        if not output.exists() or output.read_text()!=rendered:
+            output.write_text(rendered,newline='\n')
     apps=GITOPS/'applications'
     apps.mkdir(exist_ok=True)
     (apps/'project.yaml').write_text(yaml.safe_dump(app_project(c),sort_keys=False))

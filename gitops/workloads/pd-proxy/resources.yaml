@@ -326,8 +326,6 @@ spec:
           readOnly: true
         - mountPath: /run/ping-secrets
           name: runtime-secret-files
-        - mountPath: /opt/out
-          name: out-dir
       - args:
         - zone=$(kubectl get node "$NODE_NAME" -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}');
           test -n "$zone"; printf "%s" "$zone" > /runtime/availability-zone

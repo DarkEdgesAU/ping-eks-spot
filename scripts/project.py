@@ -156,6 +156,9 @@ def values(c, target, repositories=None):
                            'resources': {'requests': {'storage': c['directory_storage']}}}}}}}}
     else:
         p['envs']['MAX_HEAP_SIZE'] = '1g'
+        # Proxy instances are ephemeral and have no shared out-dir volume.
+        init = v['initContainers']['prepare-runtime']
+        init['volumeMounts'] = [mount for mount in init['volumeMounts'] if mount['name'] != 'out-dir']
         p['container']['env'] = [{'name': 'ACTIVE_COLOUR', 'valueFrom': {'configMapKeyRef': {'name': 'pd-routing', 'key': 'active_colour'}}}]
         p['workload'] = {'type': 'StatefulSet', 'statefulSet': {'persistentvolume': {'enabled': False}}}
     return v
@@ -180,6 +183,11 @@ def render(c, target, repos=None):
             names = [vol['name'] for vol in pod.get('volumes', [])]
             if len(names) != len(set(names)):
                 raise ValueError('Duplicate generated volume names')
+            available = set(names) | {claim['metadata']['name'] for claim in obj['spec'].get('volumeClaimTemplates', [])}
+            for container in pod.get('initContainers', []) + pod['containers']:
+                for mount in container.get('volumeMounts', []):
+                    if mount['name'] not in available:
+                        raise ValueError(f'{target}: container {container["name"]} mounts undefined volume {mount["name"]}')
             for con in pod['topologySpreadConstraints']:
                 if 'labelSelector' not in con:
                     raise ValueError('Chart failed to add spread selector')

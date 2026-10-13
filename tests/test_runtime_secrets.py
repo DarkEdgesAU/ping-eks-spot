@@ -57,4 +57,4 @@ class RuntimeSecretTests(unittest.TestCase):
             self.assertEqual(v['volumes']['runtime-secret-files']['emptyDir']['medium'], 'Memory')
             self.assertFalse(any(m['name'] == 'runtime-secrets' for m in v['global']['volumeMounts']))
             init = v['initContainers']['prepare-runtime']
-            self.assertTrue(any(m['name'] == 'out-dir' for m in init['volumeMounts']))
+            self.assertEqual(any(m['name'] == 'out-dir' for m in init['volumeMounts']), target != 'proxy')
