@@ -1,8 +1,8 @@
 # PingFederate blue/green
 
-Two independent clusters in `identity-federate`, each with one retained-volume
+Two independent clusters in `identity-federate-blue` and `identity-federate-green`, each with one retained-volume
 admin and three engines across three AZs. Candidate deployment leaves the stable
-`pf-active-admin` and `pf-active-engine` selectors unchanged. Directory and
+active grouped ALB ingress rules unchanged. Directory and
 Federate promotions are independent. Both PF colours use Directory Proxy LDAPS.
 
 Profiles adapt Ping's `baseline` at commit
@@ -14,6 +14,10 @@ LDAP entry, not the baseline root account. Write-dependent baseline features
 need separately reviewed LDAP permissions. No custom OIDC client is added.
 
 ## Configure
+
+For an existing shared-namespace deployment, first follow
+[FEDERATE-NAMESPACE-MIGRATION.md](FEDERATE-NAMESPACE-MIGRATION.md). Preserve the
+current admin configuration with restored claims before syncing new namespaces.
 
 Copy `federate.example.json` to ignored `federate.json`. Set immutable per-colour
 image tags. The image release is 2609, product version 13.1, provider 1.10.0;
@@ -78,7 +82,8 @@ Verify LDAP and initial login before exposing ingress:
 ```bash
 make pf-status
 make pf-ingress
-kubectl -n identity-federate get ingress
+kubectl -n identity-federate-blue get ingress
+kubectl -n identity-federate-green get ingress
 ```
 
 This creates two independent public ALBs when admin Access is enabled. Add
@@ -142,7 +147,7 @@ make pf-promote TARGET=green EVIDENCE=build/pf-green-evidence.json
 
 The gate requires fresh (five-minute) human evidence matching account/cluster,
 image/colour, all six checks, admin readiness and three-AZ engine readiness.
-Selectors update sequentially, not atomically; ALB target registration/drain is
+Grouped ingress rules update sequentially, not atomically; ALB target registration/drain is
 asynchronous. Check all target groups before declaring completion. A 120-second
 deregistration delay is not a session guarantee. Both colours stay deployed.
 Rollback uses newly verified blue evidence and the same promotion command.

@@ -14,7 +14,16 @@ import yaml
 import project
 
 ROOT = project.ROOT
-NS = 'identity-federate'
+LEGACY_NS = 'identity-federate'
+
+
+def namespace(colour):
+    if colour not in project.COLOURS: raise ValueError('Invalid PF colour')
+    return f'identity-federate-{colour}'
+
+
+def tls_name(colour):
+    return SECRET/f'federate-{colour}-{namespace(colour)}'
 SECRET = ROOT/'.secrets'
 LDAP_ID = 'LDAP-D803C87FAB2ADFB4B0A947B64BA6F0C6093A5CA3'
 EVIDENCE_FLAGS = ('terraform_applied','configuration_replicated','ldap_verified','login_verified',
@@ -58,15 +67,15 @@ def local_secrets(c):
     random_file(SECRET/'federate-signing.pin')
     signing = SECRET/'federate-signing'
     for colour in ('signing', *project.COLOURS):
-        name = signing if colour == 'signing' else SECRET/f'federate-{colour}'
+        name = signing if colour == 'signing' else tls_name(colour)
         random_file(name.with_suffix('.pin'))
         if not name.with_suffix('.p12').exists():
             ext = name.with_suffix('.cnf')
             sans = ['DNS:localhost', f'DNS:{c["admin_hostname"]}', f'DNS:{c["engine_hostname"]}']
             if colour != 'signing':
-                sans += [f'DNS:pf-{colour}-pingfederate-admin.{NS}.svc.cluster.local',
-                         f'DNS:pf-{colour}-pingfederate-engine.{NS}.svc.cluster.local',
-                         f'DNS:*.pf-{colour}-pingfederate-cluster.{NS}.svc.cluster.local']
+                sans += [f'DNS:pf-{colour}-pingfederate-admin.{namespace(colour)}.svc.cluster.local',
+                         f'DNS:pf-{colour}-pingfederate-engine.{namespace(colour)}.svc.cluster.local',
+                         f'DNS:*.pf-{colour}-pingfederate-cluster.{namespace(colour)}.svc.cluster.local']
             ext.write_text('subjectAltName='+','.join(sans)+'\nbasicConstraints=CA:FALSE\n'
                            'keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth,clientAuth\n')
             project.run(['openssl','req','-new','-newkey','rsa:3072','-nodes','-subj',f'/CN={c["engine_hostname"]}',
@@ -90,8 +99,8 @@ def local_secrets(c):
                 'k':base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip('=')}]}))
         def b64(path): return base64.b64encode(path.read_bytes()).decode()
         values = {
-            'tls-p12':b64(SECRET/f'federate-{colour}.p12'),
-            'tls-pin':(SECRET/f'federate-{colour}.pin').read_text().strip(),
+            'tls-p12':b64(tls_name(colour).with_suffix('.p12')),
+            'tls-pin':tls_name(colour).with_suffix('.pin').read_text().strip(),
             'signing-p12':b64(SECRET/'federate-signing.p12'),
             'signing-pin':(SECRET/'federate-signing.pin').read_text().strip(),
             'ca':b64(SECRET/'ca.crt'),
@@ -129,9 +138,12 @@ def values(c, colour, repository=None):
                      for name in (*mapping,'PING_IDENTITY_PASSWORD','PF_CLUSTER_PASSWORD')]
     v = {'global':{'image':{'tag':c['base_image_tag']},'envs':env,
         'includeInitContainers':['copy-federate-secrets','wait-for-directory-proxy'],
-        'includeVolumes':['pf-projected','pf-secrets'],
-        'volumeMounts':[{'name':'pf-secrets','mountPath':'/run/ping-secrets','readOnly':True}]},
+        'includeVolumes':['pf-projected','pf-secrets','pf-bootstrap-hooks'],
+        'volumeMounts':[{'name':'pf-secrets','mountPath':'/run/ping-secrets','readOnly':True},
+            {'name':'pf-bootstrap-hooks','mountPath':'/opt/in/hooks/03-build-run-plan.sh.post',
+             'subPath':'03-build-run-plan.sh.post','readOnly':True}]},
         'volumes':{'pf-projected':{'secret':{'secretName':f'pf-{colour}-runtime','items':secret_items}},
+                   'pf-bootstrap-hooks':{'configMap':{'name':f'pf-{colour}-bootstrap-hooks','defaultMode':493}},
                    'pf-secrets':{'emptyDir':{'medium':'Memory'}}},
         'initContainers':{'copy-federate-secrets':{
             'name':'copy-federate-secrets','image':f'pingidentity/pingtoolkit:{c["base_image_tag"]}',
@@ -165,23 +177,28 @@ def values(c, colour, repository=None):
     return v
 
 
-def routing(colour):
-    # One manifest updates both selectors sequentially, not transactionally.
+def routing(colour,c=None):
+    c=c or config()
+    roles=['engine']+(['admin'] if (c['admin_access_configured'] or c.get('proxy_only') is True) else [])
+    # Activate the verified target first; deactivate the prior colour second.
+    ordered=[colour]+[other for other in project.COLOURS if other!=colour]
     return {'apiVersion':'v1','kind':'List','items':[
-        {'apiVersion':'v1','kind':'Service','metadata':{'name':f'pf-active-{role}','namespace':NS},
-         'spec':{'type':'ClusterIP','selector':{'app.kubernetes.io/instance':f'pf-{colour}',
-                 'app.kubernetes.io/name':f'pingfederate-{role}'},
-                 'ports':[{'name':'https','port':port,'targetPort':port}]}}
-        for role,port in (('admin',9999),('engine',9031))]}
+        ingress(c,role,member,active=member==colour) for member in ordered for role in roles]}
 
 
-def ingress(c, role):
+def ingress(c, role, colour=None, active=True):
+    colour=colour or c['initial_colour']
     if not c['origin_certificate_arn'] or not c['cloudflare_ipv4_cidrs']:
         raise ValueError('Set ACM origin certificate ARN and current Cloudflare IPv4 ranges')
-    if role=='admin' and not c['admin_access_configured']:
-        raise ValueError('Configure and verify Cloudflare Access before enabling public admin ingress')
+    if role=='admin' and not (c['admin_access_configured'] or c.get('proxy_only') is True):
+        raise ValueError('Configure Cloudflare Access or explicit proxy_only=true before enabling public admin ingress')
     return {'apiVersion':'networking.k8s.io/v1','kind':'Ingress',
-        'metadata':{'name':f'pf-{role}','namespace':NS,'annotations':{
+        'metadata':{'name':f'pf-{role}','namespace':namespace(colour),'annotations':{
+            'identity.darkedges.com/routing-state':'active' if active else 'standby',
+            'alb.ingress.kubernetes.io/group.name':f'pf-{role}',
+            'alb.ingress.kubernetes.io/group.order':'0' if active else '100',
+            'alb.ingress.kubernetes.io/actions.pf-standby':json.dumps({'type':'fixed-response',
+                'fixedResponseConfig':{'contentType':'text/plain','statusCode':'503','messageBody':'Standby colour'}}),
             'alb.ingress.kubernetes.io/scheme':'internet-facing',
             'alb.ingress.kubernetes.io/target-type':'ip',
             'alb.ingress.kubernetes.io/listen-ports':'[{"HTTPS":443}]',
@@ -194,15 +211,23 @@ def ingress(c, role):
             'alb.ingress.kubernetes.io/target-group-attributes':'deregistration_delay.timeout_seconds=120,stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=300'}},
         'spec':{'ingressClassName':'alb','rules':[{'host':c[f'{role}_hostname'],
             'http':{'paths':[{'path':'/','pathType':'Prefix','backend':{'service':{
-                'name':f'pf-active-{role}','port':{'number':9999 if role=='admin' else 9031}}}}]}}]}}
+                'name':f'pf-{colour}-pingfederate-{role}' if active else 'pf-standby',
+                'port':({'number':9999 if role=='admin' else 9031} if active else {'name':'use-annotation'})}}}]}}]}}
+
+
+def bootstrap_hooks(colour):
+    return {'apiVersion':'v1','kind':'ConfigMap','metadata':{
+        'name':f'pf-{colour}-bootstrap-hooks','namespace':namespace(colour)},
+        'data':{'03-build-run-plan.sh.post':(ROOT/'profiles/pingfederate/hooks/03-build-run-plan.sh.post').read_text()}}
 
 
 def render(c, colour, repository=None):
     project.BUILD.mkdir(exist_ok=True)
     p = project.BUILD/f'pf-{colour}.values.yaml'
     p.write_text(yaml.safe_dump(values(c,colour,repository),sort_keys=False))
-    result = project.run(['helm','template',f'pf-{colour}',project.chart(),'-n',NS,
+    result = project.run(['helm','template',f'pf-{colour}',project.chart(),'-n',namespace(colour),
                           '--kube-version','1.35.0','-f',p],capture=True)
+    result += '\n---\n'+yaml.safe_dump(bootstrap_hooks(colour),sort_keys=False)
     docs = list(yaml.safe_load_all(result))
     for doc in docs:
         if doc and doc['kind'] in ('StatefulSet','Deployment'):
@@ -213,24 +238,33 @@ def render(c, colour, repository=None):
 
 
 def observed_colour():
-    colours=[]
-    for role in ('admin','engine'):
-        result = project.run(['kubectl','-n',NS,'get','service',f'pf-active-{role}','-o','json','--ignore-not-found'],capture=True)
-        colours.append(json.loads(result)['spec']['selector']['app.kubernetes.io/instance'].removeprefix('pf-')
-                       if result.strip() else None)
-    if colours == [None,None]: return None
-    if colours[0] != colours[1] or colours[0] not in project.COLOURS:
-        raise ValueError('PF admin/engine routing differs; repair or retry the intended promotion before deployment/configuration')
-    return colours[0]
+    roles=['engine']+(['admin'] if (config()['admin_access_configured'] or config().get('proxy_only') is True) else [])
+    active=[]; found=False
+    for role in roles:
+        selected=[]; role_found=False
+        for colour in project.COLOURS:
+            result=project.run(['kubectl','-n',namespace(colour),'get','ingress',f'pf-{role}',
+                                '-o','json','--ignore-not-found'],capture=True)
+            if result.strip():
+                found=True; role_found=True
+                if json.loads(result)['metadata']['annotations'].get('identity.darkedges.com/routing-state')=='active':
+                    selected.append(colour)
+        if len(selected)>1: raise ValueError('Both PF colours are active; retry the intended promotion')
+        if role_found: active.append(selected[0] if selected else None)
+    if not found: return None
+    if None in active or len(set(active))!=1:
+        raise ValueError('PF ingress routing differs; repair or retry the intended promotion')
+    return active[0]
 
 
 def ready(c, colour):
+    ns=namespace(colour)
     for role in ('admin','engine'):
-        data=json.loads(project.run(['kubectl','-n',NS,'get','pods','-l',
+        data=json.loads(project.run(['kubectl','-n',ns,'get','pods','-l',
             f'app.kubernetes.io/instance=pf-{colour},app.kubernetes.io/name=pingfederate-{role}', '-o','json'],capture=True))
         expected=1 if role=='admin' else 3
         if len(data['items']) != expected:
-            raise ValueError(f'{NS}: expected {expected} pf-{colour} {role} pod(s), found {len(data["items"])}. '
+            raise ValueError(f'{ns}: expected {expected} pf-{colour} {role} pod(s), found {len(data["items"])}. '
                              f'Check Argo CD application pf-{colour} source revision and sync status before configuring PF.')
         zones=set()
         for pod in data['items']:
@@ -294,8 +328,8 @@ def main():
         local_secrets(c)
         license=SECRET/'PingFederate.lic'
         if not license.is_file(): raise ValueError('Supply .secrets/PingFederate.lic')
-        project.apply({'apiVersion':'v1','kind':'Namespace','metadata':{'name':NS}})
         for colour in project.COLOURS:
+            project.apply({'apiVersion':'v1','kind':'Namespace','metadata':{'name':namespace(colour)}})
             folder=SECRET/f'pf-{colour}'
             data={'ca.crt':base64.b64encode((SECRET/'ca.crt').read_bytes()).decode(),
                   'PingFederate.lic':base64.b64encode(license.read_bytes()).decode(),
@@ -304,7 +338,7 @@ def main():
             for file in (folder/'vars').iterdir():
                 data['var.'+file.name]=base64.b64encode(file.read_bytes()).decode()
                 items.append({'key':'var.'+file.name,'path':'vars/'+file.name})
-            project.apply({'apiVersion':'v1','kind':'Secret','metadata':{'name':f'pf-{colour}-runtime','namespace':NS},'data':data})
+            project.apply({'apiVersion':'v1','kind':'Secret','metadata':{'name':f'pf-{colour}-runtime','namespace':namespace(colour)},'data':data})
     elif a.command=='build-image':
         repo=out['repositories']['pingfederate']; registry=repo.split('/')[0]
         password=project.run(['aws','ecr','get-login-password','--region',out['region']],capture=True)
@@ -319,23 +353,23 @@ def main():
         if observed_colour()==a.target:
             raise ValueError('Refusing to upgrade the active PF colour; deploy the candidate and promote')
         f=render(c,a.target,out['repositories']['pingfederate'])
-        project.run(['helm','upgrade','--install',f'pf-{a.target}',project.chart(),'-n',NS,'-f',f,'--wait','--timeout','30m'])
+        project.apply(bootstrap_hooks(a.target))
+        project.run(['helm','upgrade','--install',f'pf-{a.target}',project.chart(),'-n',namespace(a.target),'-f',f,'--wait','--timeout','30m'])
     elif a.command=='ingress':
         active=observed_colour()
         ready(c,active or c['initial_colour'])
-        project.apply(ingress(c,'engine'))
-        if c['admin_access_configured']: project.apply(ingress(c,'admin'))
-        if active is None: project.apply(routing(c['initial_colour']))
+        project.apply(routing(active or c['initial_colour'],c))
     elif a.command=='promote':
         if not a.evidence: raise ValueError('Supply PF-specific promotion evidence')
         evidence=json.loads(Path(a.evidence).read_text())
         validate_evidence(evidence,c,a.target)
         if evidence.get('cluster_arn')!=out['cluster_arn']: raise ValueError('PF evidence AWS account/cluster mismatch')
         ready(c,a.target)
-        project.apply(routing(a.target))
-        print('PF selectors updated. Wait for ALB target health/drain; retain both colours. Admin/engine changes are not atomic.')
+        project.apply(routing(a.target,c))
+        print('PF grouped ingress rules updated. Wait for ALB target health/drain; retain both colours. Changes are not atomic.')
     else:
-        project.run(['kubectl','-n',NS,'get','pods,services,ingresses','-o','wide'])
+        for colour in project.COLOURS:
+            project.run(['kubectl','-n',namespace(colour),'get','pods,services,ingresses','-o','wide'])
         print('Active PF colour:',observed_colour())
 
 

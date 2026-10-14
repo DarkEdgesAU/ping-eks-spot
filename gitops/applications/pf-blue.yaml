@@ -13,7 +13,7 @@ spec:
       recurse: false
   destination:
     server: https://kubernetes.default.svc
-    namespace: identity-federate
+    namespace: identity-federate-blue
   syncPolicy:
     syncOptions:
     - RespectIgnoreDifferences=true

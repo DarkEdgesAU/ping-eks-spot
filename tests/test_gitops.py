@@ -39,7 +39,7 @@ class GitOpsTests(unittest.TestCase):
             with self.assertRaises(ValueError): gitops.protect({'kind':kind,'metadata':{'name':name}})
 
     def test_origin_requires_access_and_tls(self):
-        with self.assertRaises(ValueError): gitops.argo_values(self.config,public=True)
+        with self.assertRaises(ValueError): gitops.argo_values({**self.config,"proxy_only":False,"access_policy_configured":False},public=True)
         config={**self.config,'access_policy_configured':True,
             'origin_certificate_arn':'arn:aws:acm:ap-southeast-2:123456789012:certificate/example',
             'cloudflare_ipv4_cidrs':['173.245.48.0/20']}

@@ -19,7 +19,7 @@ def candidate_forward(colour):
     project.BUILD.mkdir(exist_ok=True)
     log=project.BUILD/f'pf-{colour}-port-forward.log'
     with log.open('w') as stream:
-        process=subprocess.Popen(['kubectl','-n',pf.NS,'port-forward','--address','127.0.0.1',
+        process=subprocess.Popen(['kubectl','-n',pf.namespace(colour),'port-forward','--address','127.0.0.1',
             f'service/pf-{colour}-pingfederate-admin',f'{port}:9999'],stdout=stream,stderr=subprocess.STDOUT)
         try:
             deadline=time.monotonic()+20

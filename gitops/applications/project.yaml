@@ -11,7 +11,9 @@ spec:
   - server: https://kubernetes.default.svc
     namespace: identity-blue
   - server: https://kubernetes.default.svc
-    namespace: identity-federate
+    namespace: identity-federate-blue
+  - server: https://kubernetes.default.svc
+    namespace: identity-federate-green
   - server: https://kubernetes.default.svc
     namespace: identity-green
   - server: https://kubernetes.default.svc

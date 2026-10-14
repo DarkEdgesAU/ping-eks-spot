@@ -17,12 +17,12 @@ their source profile/image changes. Build/push immutable images separately.
 
 Use annotation-based Argo resource tracking so the chart's existing Helm labels
 and cluster discovery selectors remain intact. The AppProject permits only this
-repository and four workload namespaces, no cluster-scoped resources or Secrets.
+repository and five workload namespaces, no cluster-scoped resources or Secrets.
 The following remain outside Argo's reconciliation:
 
 - Terraform AWS infrastructure and PF management-API configuration.
 - Runtime Secrets, licenses, CA keys, and namespace/storage/RBAC bootstrap.
-- `pd-routing`, `pf-active-admin` and `pf-active-engine`, owned by gated promotion.
+- `pd-routing` and PF grouped ALB routing rules, owned by gated promotion.
 - Initial controller/Argo bootstrap and optional PF ingress installed separately.
 
 Applications have no automated sync or cascading deletion finalizer. Exported
@@ -113,6 +113,13 @@ private-cluster default transport; this is not a claim of mTLS on every Argo
 control-plane connection.
 
 ## Deployment order and handover
+
+PF now uses `identity-federate-blue` and `identity-federate-green`. For an
+existing shared-namespace deployment, disable auto-sync and follow
+[FEDERATE-NAMESPACE-MIGRATION.md](FEDERATE-NAMESPACE-MIGRATION.md) before updating
+Applications. The migration retains admin data via stopped-volume snapshots
+and pre-bound restored claims. Do not sync new admins onto empty PVCs or prune
+the old namespace. Certificate reissue and routing cutover require verification.
 
 Sync and verify **pd-blue first**, then pd-proxy, then pd-green. Green still joins
 blue's replication topology. Sync pf-blue, configure it with the separate PF

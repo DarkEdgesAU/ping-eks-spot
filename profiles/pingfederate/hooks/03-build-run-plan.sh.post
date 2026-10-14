@@ -10,7 +10,13 @@ for file in /run/ping-secrets/vars/*; do
     printf "export %s='%s'\n" "$name" "$value" >> "$CONTAINER_ENV"
 done
 mkdir -p "$STAGING_DIR/instance/server/default/data"
-cp /run/ping-secrets/pf.jwk "$STAGING_DIR/instance/server/default/data/pf.jwk"
-chmod 600 "$STAGING_DIR/instance/server/default/data/pf.jwk"
+if test -f "$SERVER_ROOT_DIR/server/default/data/pf.jwk"; then
+    # A retained/restored admin may have rotated keys. Never overwrite them
+    # with the original bootstrap key set from a Kubernetes Secret.
+    rm -f "$STAGING_DIR/instance/server/default/data/pf.jwk"
+else
+    cp /run/ping-secrets/pf.jwk "$STAGING_DIR/instance/server/default/data/pf.jwk"
+    chmod 600 "$STAGING_DIR/instance/server/default/data/pf.jwk"
+fi
 printf '\nPF_ENGINE_BASE_URL=%s\nPD_DELEGATOR_URL=%s\n' \
   "${PF_ENGINE_PUBLIC_HOSTNAME}:443" "${PF_ENGINE_PUBLIC_HOSTNAME}:443" >> "$CONTAINER_ENV"

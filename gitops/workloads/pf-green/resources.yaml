@@ -89,7 +89,7 @@ apiVersion: v1
 data:
   CLUSTER_BIND_ADDRESS: NON_LOOPBACK
   CLUSTER_NAME: pf-green
-  DNS_QUERY_LOCATION: pf-green-pingfederate-cluster.identity-federate.svc.cluster.local
+  DNS_QUERY_LOCATION: pf-green-pingfederate-cluster.identity-federate-green.svc.cluster.local
   DNS_RECORD_TYPE: A
   LICENSE_DIR: /run/ping-secrets
   OPERATIONAL_MODE: CLUSTERED_CONSOLE
@@ -121,7 +121,7 @@ apiVersion: v1
 data:
   CLUSTER_BIND_ADDRESS: NON_LOOPBACK
   CLUSTER_NAME: pf-green
-  DNS_QUERY_LOCATION: pf-green-pingfederate-cluster.identity-federate.svc.cluster.local
+  DNS_QUERY_LOCATION: pf-green-pingfederate-cluster.identity-federate-green.svc.cluster.local
   DNS_RECORD_TYPE: A
   LICENSE_DIR: /run/ping-secrets
   OPERATIONAL_MODE: CLUSTERED_ENGINE
@@ -239,7 +239,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: bb2e1b4440d0b15d3f561bc9e8aee47e8efda7ea5a1fa8f2adf07245b648f81a
+        checksum/config: eeefc56f0971717f15d497e1e50e11056045ca77e055b0c3d736151d097071fc
       labels:
         app.kubernetes.io/instance: pf-green
         app.kubernetes.io/managed-by: Helm
@@ -317,6 +317,10 @@ spec:
         - mountPath: /run/ping-secrets
           name: pf-secrets
           readOnly: true
+        - mountPath: /opt/in/hooks/03-build-run-plan.sh.post
+          name: pf-bootstrap-hooks
+          readOnly: true
+          subPath: 03-build-run-plan.sh.post
       enableServiceLinks: true
       initContainers:
       - command:
@@ -465,6 +469,10 @@ spec:
       - emptyDir:
           medium: Memory
         name: pf-secrets
+      - configMap:
+          defaultMode: 493
+          name: pf-green-bootstrap-hooks
+        name: pf-bootstrap-hooks
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -488,7 +496,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 2dfe5c101ce5fcc84622a14f92c6b78502837d09c7ce8a000acb9d0289471ede
+        checksum/config: 6d3858bf3fee764507368d3a3ef1b2cf1b91607012576e8854a6c46a87b8f65f
       labels:
         app.kubernetes.io/instance: pf-green
         app.kubernetes.io/managed-by: Helm
@@ -566,6 +574,10 @@ spec:
         - mountPath: /run/ping-secrets
           name: pf-secrets
           readOnly: true
+        - mountPath: /opt/in/hooks/03-build-run-plan.sh.post
+          name: pf-bootstrap-hooks
+          readOnly: true
+          subPath: 03-build-run-plan.sh.post
         - mountPath: /opt/out
           name: out-dir
       enableServiceLinks: true
@@ -676,6 +688,10 @@ spec:
       - emptyDir:
           medium: Memory
         name: pf-secrets
+      - configMap:
+          defaultMode: 493
+          name: pf-green-bootstrap-hooks
+        name: pf-bootstrap-hooks
       - name: out-dir
         persistentVolumeClaim:
           claimName: out-dir
@@ -697,3 +713,23 @@ spec:
   persistentVolumeClaimRetentionPolicy:
     whenDeleted: Retain
     whenScaled: Retain
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pf-green-bootstrap-hooks
+  namespace: identity-federate-green
+data:
+  03-build-run-plan.sh.post: "#!/usr/bin/env sh\nset -eu\nset +x\nfor file in /run/ping-secrets/vars/*;\
+    \ do\n    test -f \"$file\" || continue\n    name=$(basename \"$file\")\n    case\
+    \ \"$name\" in *[!A-Za-z0-9_]*|'') exit 1;; esac\n    value=$(cat \"$file\")\n\
+    \    case \"$value\" in *\"'\"*) echo 'Invalid generated secret encoding' >&2;\
+    \ exit 1;; esac\n    printf \"export %s='%s'\\n\" \"$name\" \"$value\" >> \"$CONTAINER_ENV\"\
+    \ndone\nmkdir -p \"$STAGING_DIR/instance/server/default/data\"\nif test -f \"\
+    $SERVER_ROOT_DIR/server/default/data/pf.jwk\"; then\n    # A retained/restored\
+    \ admin may have rotated keys. Never overwrite them\n    # with the original bootstrap\
+    \ key set from a Kubernetes Secret.\n    rm -f \"$STAGING_DIR/instance/server/default/data/pf.jwk\"\
+    \nelse\n    cp /run/ping-secrets/pf.jwk \"$STAGING_DIR/instance/server/default/data/pf.jwk\"\
+    \n    chmod 600 \"$STAGING_DIR/instance/server/default/data/pf.jwk\"\nfi\nprintf\
+    \ '\\nPF_ENGINE_BASE_URL=%s\\nPD_DELEGATOR_URL=%s\\n' \\\n  \"${PF_ENGINE_PUBLIC_HOSTNAME}:443\"\
+    \ \"${PF_ENGINE_PUBLIC_HOSTNAME}:443\" >> \"$CONTAINER_ENV\"\n"

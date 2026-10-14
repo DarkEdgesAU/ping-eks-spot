@@ -76,6 +76,8 @@ sleep() { :; }
     def test_candidate_render_has_no_active_routing_or_ingress(self):
         for colour in project.COLOURS:
             docs=[x for x in yaml.safe_load_all((project.BUILD/f'pf-{colour}.manifests.yaml').read_text()) if x]
+            self.assertEqual({x['metadata'].get('namespace',f'identity-federate-{colour}') for x in docs},
+                             {f'identity-federate-{colour}'})
             self.assertFalse(any(x['kind']=='Ingress' or x['metadata']['name'].startswith('pf-active-') for x in docs))
             admin=next(x for x in docs if x['kind']=='StatefulSet')
             self.assertEqual(admin['spec']['replicas'],1)
@@ -94,19 +96,31 @@ sleep() { :; }
                 self.assertEqual(constraint['whenUnsatisfiable'],'DoNotSchedule')
                 self.assertEqual(constraint['labelSelector']['matchLabels']['app.kubernetes.io/instance'],f'pf-{colour}')
             cm=next(x for x in docs if x['kind']=='ConfigMap' and x['metadata']['name'].endswith('engine-env-vars'))
-            self.assertEqual(cm['data']['DNS_QUERY_LOCATION'],f'pf-{colour}-pingfederate-cluster.identity-federate.svc.cluster.local')
+            self.assertEqual(cm['data']['DNS_QUERY_LOCATION'],f'pf-{colour}-pingfederate-cluster.identity-federate-{colour}.svc.cluster.local')
 
     def test_routing_keeps_both_roles_on_selected_colour(self):
+        config={**self.config,'admin_access_configured':True,'origin_certificate_arn':'arn:test',
+                'cloudflare_ipv4_cidrs':['173.245.48.0/20']}
         for colour in project.COLOURS:
-            services=federate.routing(colour)['items']
-            self.assertEqual({x['spec']['selector']['app.kubernetes.io/instance'] for x in services},{f'pf-{colour}'})
+            ingresses=federate.routing(colour,config)['items']
+            self.assertEqual(len(ingresses),4)
+            for ingress in ingresses:
+                active=ingress['metadata']['namespace']==federate.namespace(colour)
+                annotations=ingress['metadata']['annotations']
+                self.assertEqual(annotations['identity.darkedges.com/routing-state'],'active' if active else 'standby')
+                backend=ingress['spec']['rules'][0]['http']['paths'][0]['backend']['service']
+                self.assertEqual(annotations['alb.ingress.kubernetes.io/group.order'],'0' if active else '100')
+                if active: self.assertTrue(backend['name'].startswith(f'pf-{colour}-'))
+                else:
+                    self.assertEqual(backend['name'],'pf-standby')
+                    self.assertEqual(backend['port'],{'name':'use-annotation'})
 
     def test_partial_promotion_fails_closed_for_configuration(self):
-        def service(colour):
-            return json.dumps({'spec':{'selector':{'app.kubernetes.io/instance':f'pf-{colour}'}}})
-        with patch.object(project,'run',side_effect=[service('blue'),service('green')]):
+        def active():
+            return json.dumps({'metadata':{'annotations':{'identity.darkedges.com/routing-state':'active'}}})
+        with patch.object(federate,'config',return_value=self.config),patch.object(project,'run',side_effect=[active(),active()]):
             with self.assertRaises(ValueError): federate.observed_colour()
-        with patch.object(project,'run',side_effect=['','']):
+        with patch.object(federate,'config',return_value=self.config),patch.object(project,'run',side_effect=['','']):
             self.assertIsNone(federate.observed_colour())
 
     def test_variable_projection_uses_regular_runtime_copy(self):

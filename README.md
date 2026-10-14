@@ -170,7 +170,10 @@ syncing `pf-green`.
 Directory objects retain the `pd` naming in `identity-blue` and `identity-green`.
 Each replica has a separate retained claim; both colours remain in one topology.
 The proxy runs in `identity-proxy`. PF colours have separate admin/engine
-clusters in `identity-federate`. Argo Applications do not manage runtime secrets
+clusters in `identity-federate-blue` and `identity-federate-green`. For the
+existing shared-namespace lab, follow the configuration-preserving
+[namespace migration](docs/FEDERATE-NAMESPACE-MIGRATION.md) before syncing.
+Argo Applications do not manage runtime secrets
 or active-colour routing. Argo sync does not run the scripts' topology checks;
 the verification order above remains an operator responsibility.
 
@@ -230,7 +233,8 @@ endpoints. Once their protection is configured, set
 make argocd-ingress
 make pf-ingress
 kubectl -n argocd get ingress
-kubectl -n identity-federate get ingress
+kubectl -n identity-federate-blue get ingress
+kubectl -n identity-federate-green get ingress
 ```
 
 Use the resulting ALB DNS names in the optional `eks_alb_hosts` configuration
@@ -298,3 +302,7 @@ kubectl get all,ingress,pvc,sc,configmap,secrets,pvc,node,ServiceAccount,Persist
  terravision draw --source terraform
  ```
 
+
+### Cloudflare proxy without Access
+
+Set `proxy_only: true` in both `gitops/config.json` and `federate.json` to explicitly enable public admin ingress without Cloudflare Access. Keep the Access attestation flags false. ACM certificates and Cloudflare source CIDRs remain required; Argo CD and PingFederate retain their own authentication. Use proxied CNAMEs, Full (strict) TLS and cache bypass. Run `make argocd-ingress` and `make pf-ingress`, then inspect `kubectl get ingress -A -o wide`.

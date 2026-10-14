@@ -18,7 +18,7 @@ CHART=ROOT/'vendor/argo-cd-10.4.1.tgz'
 CHART_SHA='6ccb3ee39efdf1c3bbc1e69b1a5ffdf172e52fac6873d3c2a0bb8dad40ba5af0'
 NAMESPACE='argocd'
 APPS={'pd-blue':'identity-blue','pd-green':'identity-green','pd-proxy':'identity-proxy',
-      'pf-blue':'identity-federate','pf-green':'identity-federate'}
+      'pf-blue':'identity-federate-blue','pf-green':'identity-federate-green'}
 
 
 def config():
@@ -53,8 +53,8 @@ def argo_values(c, public=False):
        'applicationSet':{'enabled':False},
        'server':{'certificateSecret':{'enabled':False},'ingress':{'enabled':False}}}
     if public:
-        if not c['access_policy_configured'] or not c['origin_certificate_arn'] or not c['cloudflare_ipv4_cidrs']:
-            raise ValueError('Configure Cloudflare Access, origin ACM certificate and Cloudflare source CIDRs before public Argo ingress')
+        if not (c['access_policy_configured'] or c.get('proxy_only') is True) or not c['origin_certificate_arn'] or not c['cloudflare_ipv4_cidrs']:
+            raise ValueError('Configure Cloudflare Access or explicit proxy_only=true, origin ACM certificate and Cloudflare source CIDRs before public Argo ingress')
         v['server']['ingress']={
             'enabled':True,'controller':'generic','ingressClassName':'alb','hostname':c['hostname'],
             'annotations':{
@@ -146,9 +146,15 @@ def export(c):
             output.write_text(rendered,newline='\n')
     apps=GITOPS/'applications'
     apps.mkdir(exist_ok=True)
-    (apps/'project.yaml').write_text(yaml.safe_dump(app_project(c),sort_keys=False))
+    project_file=apps/'project.yaml'
+    project_yaml=yaml.safe_dump(app_project(c),sort_keys=False)
+    if not project_file.exists() or project_file.read_text()!=project_yaml:
+        project_file.write_text(project_yaml,newline='\n')
     for name,ns in APPS.items():
-        (apps/f'{name}.yaml').write_text(yaml.safe_dump(application(c,name,ns),sort_keys=False))
+        application_file=apps/f'{name}.yaml'
+        application_yaml=yaml.safe_dump(application(c,name,ns),sort_keys=False)
+        if not application_file.exists() or application_file.read_text()!=application_yaml:
+            application_file.write_text(application_yaml,newline='\n')
     print('Exported five secret-free applications. Review and commit gitops/ before syncing; nothing was deployed.')
 
 
