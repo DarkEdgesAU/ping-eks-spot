@@ -1,0 +1,546 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  annotations: null
+  labels:
+    app.kubernetes.io/instance: pa-green
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingaccess-engine
+    helm.sh/chart: ping-devops-0.16.0
+  name: pa-green-pingaccess-engine
+  namespace: identity-access-green
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: pa-green
+      app.kubernetes.io/name: pingaccess-engine
+---
+apiVersion: v1
+data:
+  PA_ADMIN_PRIVATE_HOSTNAME: pa-green-pingaccess-admin
+  PA_ADMIN_PRIVATE_PORT_CLUSTERCONFIG: '9090'
+  PA_ADMIN_PRIVATE_PORT_HTTPS: '9000'
+  PA_ADMIN_PUBLIC_HOSTNAME: pa-admin-green.eks.darkedges.com
+  PA_ADMIN_PUBLIC_PORT_HTTPS: '9000'
+  PA_ENGINE_PRIVATE_HOSTNAME: pa-green-pingaccess-engine
+  PA_ENGINE_PRIVATE_PORT_HTTPS: '3000'
+  PA_ENGINE_PUBLIC_HOSTNAME: access.eks.darkedges.com
+  PA_ENGINE_PUBLIC_PORT_HTTPS: '3000'
+  PAZ_ENGINE_PRIVATE_HOSTNAME: pa-green-pingauthorize
+  PAZ_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PAZ_ENGINE_PUBLIC_HOSTNAME: localhost
+  PAZ_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PAZP_ENGINE_PRIVATE_HOSTNAME: pa-green-pingauthorizepap
+  PAZP_ENGINE_PRIVATE_PORT_HTTPS: '8443'
+  PAZP_ENGINE_PUBLIC_HOSTNAME: localhost
+  PAZP_ENGINE_PUBLIC_PORT_HTTPS: '8443'
+  PD_CONSOLE_PRIVATE_HOSTNAME: pa-green-pingdataconsole
+  PD_CONSOLE_PRIVATE_PORT_HTTPS: '8443'
+  PD_CONSOLE_PUBLIC_HOSTNAME: localhost
+  PD_CONSOLE_PUBLIC_PORT_HTTPS: '8443'
+  PD_DELEGATOR_PRIVATE_HOSTNAME: pa-green-pingdelegator
+  PD_DELEGATOR_PRIVATE_PORT_HTTPS: '6443'
+  PD_DELEGATOR_PUBLIC_HOSTNAME: localhost
+  PD_DELEGATOR_PUBLIC_PORT_HTTPS: '6443'
+  PD_ENGINE_PRIVATE_HOSTNAME: pa-green-pingdirectory
+  PD_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PD_ENGINE_PRIVATE_PORT_LDAP: '389'
+  PD_ENGINE_PRIVATE_PORT_LDAPS: '636'
+  PD_ENGINE_PUBLIC_HOSTNAME: localhost
+  PD_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PDP_ENGINE_PRIVATE_HOSTNAME: pa-green-pingdirectoryproxy
+  PDP_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PDP_ENGINE_PRIVATE_PORT_LDAP: '389'
+  PDP_ENGINE_PRIVATE_PORT_LDAPS: '636'
+  PDP_ENGINE_PUBLIC_HOSTNAME: localhost
+  PDP_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PDS_ENGINE_PRIVATE_HOSTNAME: pa-green-pingdatasync
+  PDS_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PDS_ENGINE_PUBLIC_HOSTNAME: localhost
+  PDS_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PF_ADMIN_PRIVATE_HOSTNAME: pa-green-pingfederate-admin
+  PF_ADMIN_PRIVATE_PORT_HTTPS: '9999'
+  PF_ADMIN_PUBLIC_HOSTNAME: localhost
+  PF_ADMIN_PUBLIC_PORT_HTTPS: '9999'
+  PF_ENGINE_PRIVATE_HOSTNAME: pa-green-pingfederate-engine
+  PF_ENGINE_PRIVATE_PORT_HTTPS: '9031'
+  PF_ENGINE_PUBLIC_HOSTNAME: localhost
+  PF_ENGINE_PUBLIC_PORT_HTTPS: '9031'
+  PING_DEBUG: 'false'
+  PING_IDENTITY_ACCEPT_EULA: 'YES'
+  ROOT_USER: administrator
+  VERBOSE: 'false'
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: pa-green
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: global
+    helm.sh/chart: ping-devops-0.16.0
+  name: pa-green-global-env-vars
+  namespace: identity-access-green
+---
+apiVersion: v1
+data:
+  OPERATIONAL_MODE: CLUSTERED_CONSOLE
+  PA_ADMIN_PUBLIC_HOSTNAME: pa-admin-green.eks.darkedges.com
+  PA_ENGINE_PUBLIC_HOSTNAME: access.eks.darkedges.com
+  PA_RUN_PA_OPERATIONAL_MODE: CLUSTERED_CONSOLE
+  PING_DEBUG: 'false'
+  PING_IDENTITY_ACCEPT_EULA: 'YES'
+  ROOT_USER: administrator
+  VERBOSE: 'false'
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: pa-green
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingaccess-admin
+    helm.sh/chart: ping-devops-0.16.0
+  name: pa-green-pingaccess-admin-env-vars
+  namespace: identity-access-green
+---
+apiVersion: v1
+data:
+  OPERATIONAL_MODE: CLUSTERED_ENGINE
+  PA_ADMIN_PUBLIC_HOSTNAME: pa-admin-green.eks.darkedges.com
+  PA_ENGINE_PUBLIC_HOSTNAME: access.eks.darkedges.com
+  PA_RUN_PA_OPERATIONAL_MODE: CLUSTERED_ENGINE
+  PING_DEBUG: 'false'
+  PING_IDENTITY_ACCEPT_EULA: 'YES'
+  ROOT_USER: administrator
+  VERBOSE: 'false'
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: pa-green
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingaccess-engine
+    helm.sh/chart: ping-devops-0.16.0
+  name: pa-green-pingaccess-engine-env-vars
+  namespace: identity-access-green
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: 'true'
+  labels:
+    app.kubernetes.io/instance: pa-green
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingaccess-admin
+    helm.sh/chart: ping-devops-0.16.0
+  name: pa-green-pingaccess-admin-cluster
+  namespace: identity-access-green
+spec:
+  clusterIP: None
+  ports: null
+  publishNotReadyAddresses: true
+  selector:
+    clusterIdentifier: pa-green-pingaccess
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: null
+  labels:
+    app.kubernetes.io/instance: pa-green
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingaccess-admin
+    helm.sh/chart: ping-devops-0.16.0
+  name: pa-green-pingaccess-admin
+  namespace: identity-access-green
+spec:
+  ports:
+  - name: clusterconfig
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  - name: https
+    port: 9000
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    app.kubernetes.io/instance: pa-green
+    app.kubernetes.io/name: pingaccess-admin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: null
+  labels:
+    app.kubernetes.io/instance: pa-green
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingaccess-engine
+    helm.sh/chart: ping-devops-0.16.0
+  name: pa-green-pingaccess-engine
+  namespace: identity-access-green
+spec:
+  ports:
+  - name: https
+    port: 3000
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app.kubernetes.io/instance: pa-green
+    app.kubernetes.io/name: pingaccess-engine
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations: null
+  labels:
+    app.kubernetes.io/instance: pa-green
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingaccess-engine
+    helm.sh/chart: ping-devops-0.16.0
+  name: pa-green-pingaccess-engine
+  namespace: identity-access-green
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: pa-green
+      app.kubernetes.io/name: pingaccess-engine
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: ca5180eaf1d78de95377d39f360e008a6a1cf5fe62552729c3140f7954920457
+      labels:
+        app.kubernetes.io/instance: pa-green
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: pingaccess-engine
+        helm.sh/chart: ping-devops-0.16.0
+    spec:
+      affinity: {}
+      containers:
+      - args: null
+        envFrom:
+        - configMapRef:
+            name: pa-green-global-env-vars
+            optional: true
+        - configMapRef:
+            name: pa-green-env-vars
+            optional: true
+        - configMapRef:
+            name: pa-green-pingaccess-engine-env-vars
+        - secretRef:
+            name: devops-secret
+            optional: true
+        - secretRef:
+            name: pa-green-pingaccess-engine-git-secret
+            optional: true
+        image: 447061058131.dkr.ecr.ap-southeast-2.amazonaws.com/pd-spot-dev/pingaccess:pa-v1
+        imagePullPolicy: IfNotPresent
+        lifecycle: {}
+        livenessProbe:
+          exec:
+            command:
+            - /opt/liveness.sh
+          failureThreshold: 4
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: pingaccess-engine
+        ports:
+        - containerPort: 3000
+          name: https
+        readinessProbe:
+          exec:
+            command:
+            - /opt/readiness.sh
+          failureThreshold: 4
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: 2
+            memory: 4Gi
+          requests:
+            cpu: 500m
+            memory: 2Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        startupProbe:
+          exec:
+            command:
+            - /opt/liveness.sh
+          failureThreshold: 90
+          periodSeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /run/ping-secrets
+          name: pa-secrets
+          readOnly: true
+      enableServiceLinks: true
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - echo "Waiting for pa-green-pingaccess-admin:"9000"..." && wait-for pa-green-pingaccess-admin:"9000"
+          -t 300 -- echo "pa-green-pingaccess-admin:"9000" running"
+        image: pingidentity/pingtoolkit:2609
+        imagePullPolicy: IfNotPresent
+        name: wait-for-pingaccess-admin
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 1m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: true
+          runAsUser: 9031
+          seccompProfile:
+            type: RuntimeDefault
+      - args:
+        - umask 077; for source in /run/projected/*; do cp -RL "$source" /run/ping-secrets/;
+          done; find /run/ping-secrets -mindepth 1 -type f -exec chmod 600 {} +; find
+          /run/ping-secrets -mindepth 1 -type d -exec chmod 700 {} +
+        command:
+        - sh
+        - -ec
+        image: pingidentity/pingtoolkit:2609
+        name: copy-access-secrets
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsGroup: 0
+          runAsUser: 9031
+        volumeMounts:
+        - mountPath: /run/projected
+          name: pa-projected
+          readOnly: true
+        - mountPath: /run/ping-secrets
+          name: pa-secrets
+      nodeSelector: {}
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 0
+        runAsGroup: 0
+        runAsNonRoot: true
+        runAsUser: 9031
+        seccompProfile:
+          type: RuntimeDefault
+      shareProcessNamespace: false
+      terminationGracePeriodSeconds: 120
+      tolerations: []
+      topologySpreadConstraints:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: pa-green
+            app.kubernetes.io/name: pingaccess-engine
+        maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: pa-green
+            app.kubernetes.io/name: pingaccess-engine
+        maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+      volumes:
+      - name: pa-projected
+        secret:
+          items:
+          - key: admin-password
+            path: admin-password
+          - key: PingAccess.lic
+            path: pingaccess.lic
+          - key: ca.crt
+            path: ca.crt
+          secretName: pa-green-runtime
+      - emptyDir:
+          medium: Memory
+        name: pa-secrets
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    app.kubernetes.io/instance: pa-green
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingaccess-admin
+    helm.sh/chart: ping-devops-0.16.0
+  name: pa-green-pingaccess-admin
+  namespace: identity-access-green
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: pa-green
+      app.kubernetes.io/name: pingaccess-admin
+  serviceName: pa-green-pingaccess-admin-cluster
+  template:
+    metadata:
+      annotations:
+        checksum/config: 380decc6f0859d532505203c518295d4e7b121c8781f5a2a6844b2a7927abd1e
+      labels:
+        app.kubernetes.io/instance: pa-green
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: pingaccess-admin
+        clusterIdentifier: pa-green-pingaccess
+        helm.sh/chart: ping-devops-0.16.0
+    spec:
+      affinity: {}
+      containers:
+      - args: null
+        envFrom:
+        - configMapRef:
+            name: pa-green-global-env-vars
+            optional: true
+        - configMapRef:
+            name: pa-green-env-vars
+            optional: true
+        - configMapRef:
+            name: pa-green-pingaccess-admin-env-vars
+        - secretRef:
+            name: devops-secret
+            optional: true
+        - secretRef:
+            name: pa-green-pingaccess-admin-git-secret
+            optional: true
+        image: 447061058131.dkr.ecr.ap-southeast-2.amazonaws.com/pd-spot-dev/pingaccess:pa-v1
+        imagePullPolicy: IfNotPresent
+        lifecycle: {}
+        livenessProbe:
+          exec:
+            command:
+            - /opt/liveness.sh
+          failureThreshold: 4
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: pingaccess-admin
+        ports:
+        - containerPort: 9090
+          name: clusterconfig
+        - containerPort: 9000
+          name: https
+        readinessProbe:
+          exec:
+            command:
+            - /opt/readiness.sh
+          failureThreshold: 4
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: 2
+            memory: 4Gi
+          requests:
+            cpu: 500m
+            memory: 2Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        startupProbe:
+          exec:
+            command:
+            - /opt/liveness.sh
+          failureThreshold: 90
+          periodSeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /run/ping-secrets
+          name: pa-secrets
+          readOnly: true
+        - mountPath: /opt/out
+          name: out-dir
+      enableServiceLinks: true
+      initContainers:
+      - args:
+        - umask 077; for source in /run/projected/*; do cp -RL "$source" /run/ping-secrets/;
+          done; find /run/ping-secrets -mindepth 1 -type f -exec chmod 600 {} +; find
+          /run/ping-secrets -mindepth 1 -type d -exec chmod 700 {} +
+        command:
+        - sh
+        - -ec
+        image: pingidentity/pingtoolkit:2609
+        name: copy-access-secrets
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsGroup: 0
+          runAsUser: 9031
+        volumeMounts:
+        - mountPath: /run/projected
+          name: pa-projected
+          readOnly: true
+        - mountPath: /run/ping-secrets
+          name: pa-secrets
+      nodeSelector: {}
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 0
+        runAsGroup: 0
+        runAsNonRoot: true
+        runAsUser: 9031
+        seccompProfile:
+          type: RuntimeDefault
+      shareProcessNamespace: false
+      terminationGracePeriodSeconds: 120
+      tolerations: []
+      topologySpreadConstraints: null
+      volumes:
+      - name: pa-projected
+        secret:
+          items:
+          - key: admin-password
+            path: admin-password
+          - key: PingAccess.lic
+            path: pingaccess.lic
+          - key: ca.crt
+            path: ca.crt
+          secretName: pa-green-runtime
+      - emptyDir:
+          medium: Memory
+        name: pa-secrets
+      - name: out-dir
+        persistentVolumeClaim:
+          claimName: out-dir
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - metadata:
+      annotations: {}
+      name: out-dir
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: pingdirectory-ebs
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain

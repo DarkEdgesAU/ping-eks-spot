@@ -9,6 +9,10 @@ spec:
   - https://github.com/darkedges/pingdirectory-eks-spot.git
   destinations:
   - server: https://kubernetes.default.svc
+    namespace: identity-access-blue
+  - server: https://kubernetes.default.svc
+    namespace: identity-access-green
+  - server: https://kubernetes.default.svc
     namespace: identity-blue
   - server: https://kubernetes.default.svc
     namespace: identity-federate-blue

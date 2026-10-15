@@ -17,7 +17,6 @@ spec:
 ---
 apiVersion: v1
 data:
-  LICENSE_DIR: /run/ping-secrets
   PA_ADMIN_PRIVATE_HOSTNAME: pf-green-pingaccess-admin
   PA_ADMIN_PRIVATE_PORT_CLUSTERCONFIG: '9090'
   PA_ADMIN_PRIVATE_PORT_HTTPS: '9000'
@@ -61,8 +60,8 @@ data:
   PDS_ENGINE_PUBLIC_PORT_HTTPS: '1443'
   PF_ADMIN_PRIVATE_HOSTNAME: pf-green-pingfederate-admin
   PF_ADMIN_PRIVATE_PORT_HTTPS: '9999'
-  PF_ADMIN_PUBLIC_BASEURL: https://admin.eks.darkedges.com
-  PF_ADMIN_PUBLIC_HOSTNAME: admin.eks.darkedges.com
+  PF_ADMIN_PUBLIC_BASEURL: https://admin-green.eks.darkedges.com
+  PF_ADMIN_PUBLIC_HOSTNAME: admin-green.eks.darkedges.com
   PF_ADMIN_PUBLIC_PORT_HTTPS: '443'
   PF_CLUSTER_ADMIN_NODES_SYNC_ENABLED: 'false'
   PF_ENGINE_PRIVATE_HOSTNAME: pf-green-pingfederate-engine
@@ -91,12 +90,11 @@ data:
   CLUSTER_NAME: pf-green
   DNS_QUERY_LOCATION: pf-green-pingfederate-cluster.identity-federate-green.svc.cluster.local
   DNS_RECORD_TYPE: A
-  LICENSE_DIR: /run/ping-secrets
   OPERATIONAL_MODE: CLUSTERED_CONSOLE
   PD_ENGINE_PRIVATE_HOSTNAME: pd-pingdirectoryproxy.identity-proxy.svc.cluster.local
   PD_ENGINE_PRIVATE_PORT_LDAP: '636'
-  PF_ADMIN_PUBLIC_BASEURL: https://admin.eks.darkedges.com
-  PF_ADMIN_PUBLIC_HOSTNAME: admin.eks.darkedges.com
+  PF_ADMIN_PUBLIC_BASEURL: https://admin-green.eks.darkedges.com
+  PF_ADMIN_PUBLIC_HOSTNAME: admin-green.eks.darkedges.com
   PF_ADMIN_PUBLIC_PORT_HTTPS: '443'
   PF_CLUSTER_ADMIN_NODES_SYNC_ENABLED: 'false'
   PF_ENGINE_PUBLIC_HOSTNAME: id.eks.darkedges.com
@@ -123,13 +121,12 @@ data:
   CLUSTER_NAME: pf-green
   DNS_QUERY_LOCATION: pf-green-pingfederate-cluster.identity-federate-green.svc.cluster.local
   DNS_RECORD_TYPE: A
-  LICENSE_DIR: /run/ping-secrets
   OPERATIONAL_MODE: CLUSTERED_ENGINE
   PD_ENGINE_PRIVATE_HOSTNAME: pd-pingdirectoryproxy.identity-proxy.svc.cluster.local
   PD_ENGINE_PRIVATE_PORT_LDAP: '636'
   PF_ADMIN_PORT: '9999'
-  PF_ADMIN_PUBLIC_BASEURL: https://admin.eks.darkedges.com
-  PF_ADMIN_PUBLIC_HOSTNAME: admin.eks.darkedges.com
+  PF_ADMIN_PUBLIC_BASEURL: https://admin-green.eks.darkedges.com
+  PF_ADMIN_PUBLIC_HOSTNAME: admin-green.eks.darkedges.com
   PF_ADMIN_PUBLIC_PORT_HTTPS: '443'
   PF_CLUSTER_ADMIN_NODES_SYNC_ENABLED: 'false'
   PF_ENGINE_PUBLIC_HOSTNAME: id.eks.darkedges.com
@@ -239,7 +236,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: eeefc56f0971717f15d497e1e50e11056045ca77e055b0c3d736151d097071fc
+        checksum/config: 410b58664cb36a87fb516a576a0449505c7aef84ca05f3a6bf69d6f136369558
       labels:
         app.kubernetes.io/instance: pf-green
         app.kubernetes.io/managed-by: Helm
@@ -496,7 +493,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 6d3858bf3fee764507368d3a3ef1b2cf1b91607012576e8854a6c46a87b8f65f
+        checksum/config: eeab39e3d9031a43b212d31304e29ec3decfd864f532c7a8991301845878d3a4
       labels:
         app.kubernetes.io/instance: pf-green
         app.kubernetes.io/managed-by: Helm
@@ -720,13 +717,22 @@ metadata:
   name: pf-green-bootstrap-hooks
   namespace: identity-federate-green
 data:
-  03-build-run-plan.sh.post: "#!/usr/bin/env sh\nset -eu\nset +x\nfor file in /run/ping-secrets/vars/*;\
-    \ do\n    test -f \"$file\" || continue\n    name=$(basename \"$file\")\n    case\
-    \ \"$name\" in *[!A-Za-z0-9_]*|'') exit 1;; esac\n    value=$(cat \"$file\")\n\
-    \    case \"$value\" in *\"'\"*) echo 'Invalid generated secret encoding' >&2;\
-    \ exit 1;; esac\n    printf \"export %s='%s'\\n\" \"$name\" \"$value\" >> \"$CONTAINER_ENV\"\
-    \ndone\nmkdir -p \"$STAGING_DIR/instance/server/default/data\"\nif test -f \"\
-    $SERVER_ROOT_DIR/server/default/data/pf.jwk\"; then\n    # A retained/restored\
+  03-build-run-plan.sh.post: "#!/usr/bin/env sh\nset -eu\nset +x\n# Retained instances\
+    \ keep run.properties; reconcile only the admin URL fields.\nif test -f \"$SERVER_ROOT_DIR/bin/run.properties\"\
+    ; then\n    sed -i \"s|^pf.admin.hostname=.*|pf.admin.hostname=${PF_ADMIN_PUBLIC_HOSTNAME}|;s|^pf.admin.baseurl=.*|pf.admin.baseurl=${PF_ADMIN_PUBLIC_BASEURL}|\"\
+    \ \\\n        \"$SERVER_ROOT_DIR/bin/run.properties\"\nfi\n# PF reads its license\
+    \ from the instance conf directory, not LICENSE_DIR.\n# Preserve a license uploaded\
+    \ through the console on retained instances.\nlicense_relative=server/default/conf/pingfederate.lic\n\
+    mkdir -p \"$STAGING_DIR/instance/server/default/conf\"\nif test -s \"$SERVER_ROOT_DIR/$license_relative\"\
+    ; then\n    rm -f \"$STAGING_DIR/instance/$license_relative\"\nelse\n    test\
+    \ -s /run/ping-secrets/pingfederate.lic\n    cp /run/ping-secrets/pingfederate.lic\
+    \ \"$STAGING_DIR/instance/$license_relative\"\n    chmod 600 \"$STAGING_DIR/instance/$license_relative\"\
+    \nfi\nfor file in /run/ping-secrets/vars/*; do\n    test -f \"$file\" || continue\n\
+    \    name=$(basename \"$file\")\n    case \"$name\" in *[!A-Za-z0-9_]*|'') exit\
+    \ 1;; esac\n    value=$(cat \"$file\")\n    case \"$value\" in *\"'\"*) echo 'Invalid\
+    \ generated secret encoding' >&2; exit 1;; esac\n    printf \"export %s='%s'\\\
+    n\" \"$name\" \"$value\" >> \"$CONTAINER_ENV\"\ndone\nmkdir -p \"$STAGING_DIR/instance/server/default/data\"\
+    \nif test -f \"$SERVER_ROOT_DIR/server/default/data/pf.jwk\"; then\n    # A retained/restored\
     \ admin may have rotated keys. Never overwrite them\n    # with the original bootstrap\
     \ key set from a Kubernetes Secret.\n    rm -f \"$STAGING_DIR/instance/server/default/data/pf.jwk\"\
     \nelse\n    cp /run/ping-secrets/pf.jwk \"$STAGING_DIR/instance/server/default/data/pf.jwk\"\
