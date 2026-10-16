@@ -1,0 +1,11 @@
+server.host: 0.0.0.0
+server.ssl.enabled: true
+server.ssl.certificate: /tls/dashboards.crt
+server.ssl.key: /tls/dashboards.key
+opensearch.hosts: ['https://opensearch.logging.svc.cluster.local:9200']
+opensearch.ssl.verificationMode: full
+opensearch.ssl.certificateAuthorities: [/tls/ca.crt]
+opensearch.username: kibanaserver
+opensearch.password: ${DASHBOARDS_PASSWORD}
+opensearch.requestHeadersAllowlist: [authorization, securitytenant]
+opensearch_security.cookie.secure: true

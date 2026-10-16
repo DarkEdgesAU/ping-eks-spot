@@ -9,3 +9,23 @@ for name in demo-user-password federate-ldap-password; do
     esac
     printf '\n%s=%s\n' "$variable" "$(cat "/run/ping-secrets/$name")" >> "$CONTAINER_ENV"
 done
+
+# Fail closed rather than seed upstream demo credentials.
+test -s /run/ping-secrets/oauth-client-pingaccessac.hash || { echo "Missing runtime OAuth credential for pingaccessAc" >&2; exit 1; }
+printf '\nOAUTH_CLIENT_HASH_PINGACCESSAC=%s\n' "$(cat /run/ping-secrets/oauth-client-pingaccessac.hash)" >> "$CONTAINER_ENV"
+test -s /run/ping-secrets/oauth-client-cc-secret-client.hash || { echo "Missing runtime OAuth credential for cc_secret_client" >&2; exit 1; }
+printf '\nOAUTH_CLIENT_HASH_CC_SECRET_CLIENT=%s\n' "$(cat /run/ping-secrets/oauth-client-cc-secret-client.hash)" >> "$CONTAINER_ENV"
+test -s /run/ping-secrets/oauth-client-rs-client.hash || { echo "Missing runtime OAuth credential for rs_client" >&2; exit 1; }
+printf '\nOAUTH_CLIENT_HASH_RS_CLIENT=%s\n' "$(cat /run/ping-secrets/oauth-client-rs-client.hash)" >> "$CONTAINER_ENV"
+test -s /run/ping-secrets/oauth-client-ac-oic-client.hash || { echo "Missing runtime OAuth credential for ac_oic_client" >&2; exit 1; }
+printf '\nOAUTH_CLIENT_HASH_AC_OIC_CLIENT=%s\n' "$(cat /run/ping-secrets/oauth-client-ac-oic-client.hash)" >> "$CONTAINER_ENV"
+test -s /run/ping-secrets/oauth-client-pingdirectory.hash || { echo "Missing runtime OAuth credential for pingdirectory" >&2; exit 1; }
+printf '\nOAUTH_CLIENT_HASH_PINGDIRECTORY=%s\n' "$(cat /run/ping-secrets/oauth-client-pingdirectory.hash)" >> "$CONTAINER_ENV"
+test -s /run/ping-secrets/oauth-client-cc-jwt-client.jwks || { echo "Missing runtime OAuth credential for cc_jwt_client" >&2; exit 1; }
+printf '\nOAUTH_CLIENT_JWKS_CC_JWT_CLIENT=%s\n' "$(cat /run/ping-secrets/oauth-client-cc-jwt-client.jwks)" >> "$CONTAINER_ENV"
+test -s /run/ping-secrets/oauth-client-ac-oic-client.jwks || { echo "Missing runtime OAuth credential for ac_oic_client" >&2; exit 1; }
+printf '\nOAUTH_CLIENT_JWKS_AC_OIC_CLIENT=%s\n' "$(cat /run/ping-secrets/oauth-client-ac-oic-client.jwks)" >> "$CONTAINER_ENV"
+test -s /run/ping-secrets/oauth-client-im-oic-client.jwks || { echo "Missing runtime OAuth credential for im_oic_client" >&2; exit 1; }
+printf '\nOAUTH_CLIENT_JWKS_IM_OIC_CLIENT=%s\n' "$(cat /run/ping-secrets/oauth-client-im-oic-client.jwks)" >> "$CONTAINER_ENV"
+test -s /run/ping-secrets/oauth-client-ac-oic-client.reversible || { echo "Missing runtime reversible OAuth credential" >&2; exit 1; }
+printf '\nOAUTH_CLIENT_REVERSIBLE_AC_OIC_CLIENT=%s\n' "$(cat /run/ping-secrets/oauth-client-ac-oic-client.reversible)" >> "$CONTAINER_ENV"

@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: metrics
+  namespace: argocd
+spec:
+  description: Optional platform services; secrets and routing stay operator-owned
+  sourceRepos:
+  - https://github.com/darkedges/pingdirectory-eks-spot.git
+  destinations:
+  - server: https://kubernetes.default.svc
+    namespace: monitoring
+  - server: https://kubernetes.default.svc
+    namespace: identity-blue
+  - server: https://kubernetes.default.svc
+    namespace: identity-green
+  - server: https://kubernetes.default.svc
+    namespace: identity-proxy
+  - server: https://kubernetes.default.svc
+    namespace: identity-federate-blue
+  - server: https://kubernetes.default.svc
+    namespace: identity-federate-green
+  - server: https://kubernetes.default.svc
+    namespace: identity-access-blue
+  - server: https://kubernetes.default.svc
+    namespace: identity-access-green
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+  - group: ''
+    kind: ConfigMap
+  - group: ''
+    kind: Service
+  - group: ''
+    kind: ServiceAccount
+  - group: ''
+    kind: PersistentVolumeClaim
+  - group: apps
+    kind: Deployment
+  - group: apps
+    kind: StatefulSet
+  - group: policy
+    kind: PodDisruptionBudget
+  - group: networking.k8s.io
+    kind: Ingress
+  - group: networking.k8s.io
+    kind: NetworkPolicy
+  - group: rbac.authorization.k8s.io
+    kind: Role
+  - group: rbac.authorization.k8s.io
+    kind: RoleBinding
+  - group: ''
+    kind: ServiceAccount

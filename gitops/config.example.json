@@ -1,0 +1,10 @@
+{
+  "repo_url": "https://github.com/darkedges/pingdirectory-eks-spot.git",
+  "revision": "main",
+  "ecr_prefix": "447061058131.dkr.ecr.ap-southeast-2.amazonaws.com/pd-spot-dev",
+  "hostname": "argocd.eks.darkedges.com",
+  "origin_certificate_arn": "",
+  "cloudflare_ipv4_cidrs": [],
+  "access_policy_configured": false,
+  "proxy_only": true
+}

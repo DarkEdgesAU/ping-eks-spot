@@ -24,7 +24,8 @@ APPS={'pd-blue':'identity-blue','pd-green':'identity-green','pd-proxy':'identity
 
 
 def config():
-    c=json.loads((GITOPS/'config.json').read_text())
+    path=GITOPS/'config.json'
+    c=json.loads((path if path.exists() else GITOPS/'config.example.json').read_text())
     if not c['repo_url'].startswith('https://github.com/') or '@' in c['repo_url']:
         raise ValueError('Use a credential-free GitHub repository URL; install private repo credentials separately')
     if not c['revision'] or not c['ecr_prefix'] or not c['hostname']:
@@ -160,7 +161,25 @@ def export(c):
         application_yaml=yaml.safe_dump(application(c,name,ns),sort_keys=False)
         if not application_file.exists() or application_file.read_text()!=application_yaml:
             application_file.write_text(application_yaml,newline='\n')
-    print(f'Exported {len(APPS)} secret-free applications. Review and commit gitops/ before syncing; nothing was deployed.')
+    import observability
+    observability.export()
+    logging_application(c)
+    import platform_services
+    platform_services.export()
+    print(f'Exported {len(APPS)+4} secret-free applications. Review and commit gitops/ before syncing; nothing was deployed.')
+
+
+def logging_application(c):
+    # Separate namespace-scoped project; no cluster RBAC or Secrets managed by Git.
+    spec=app_project(c)['spec']
+    spec['description']='OpenSearch log-shipping POC'
+    spec['destinations']=[{'server':'https://kubernetes.default.svc','namespace':'logging'}]
+    spec['namespaceResourceWhitelist'].append({'group':'apps','kind':'DaemonSet'})
+    project_doc={'apiVersion':'argoproj.io/v1alpha1','kind':'AppProject',
+        'metadata':{'name':'observability','namespace':NAMESPACE},'spec':spec}
+    app=application(c,'logging','logging'); app['spec']['project']='observability'
+    for name,doc in [('logging-project.yaml',project_doc),('logging.yaml',app)]:
+        (GITOPS/'applications'/name).write_text(yaml.safe_dump(doc,sort_keys=False),newline='\n')
 
 
 def validate(c):
@@ -228,6 +247,11 @@ def main():
         project.run(['kubectl','apply','-f',GITOPS/'applications/project.yaml'])
         for name in APPS:
             project.run(['kubectl','apply','-f',GITOPS/'applications'/f'{name}.yaml'])
+        for name in ('logging-project.yaml','logging.yaml'):
+            project.run(['kubectl','apply','-f',GITOPS/'applications'/name])
+        for name in ('metrics','delegator','pingcentral'):
+            for suffix in ('-project.yaml','.yaml'):
+                project.run(['kubectl','apply','-f',GITOPS/'applications'/(name+suffix)])
         print('Applications registered without sync. Direct workload Helm deployment is now disabled locally.')
 
 

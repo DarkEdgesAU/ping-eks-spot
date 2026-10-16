@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: delegator-profile
+  namespace: identity-delegator
+data:
+  profile-0: 'window.OIDC_AUTHORITY = "https://access.eks.darkedges.com/identity";
+
+    window.DADMIN_CLIENT_ID = ''dadmin'';
+
+    window.AUTHENTICATE_WITH_PKCE = true;
+
+    window.DS_HOST = "ext-pingdelegator.eks.darkedges.com";
+
+    window.DS_PORT = '''';
+
+    window.PD_DADMIN_CONFIG = { PROFILE_SCOPE_ENABLED: false };
+
+    window.DADMIN_API_NAMESPACE = ''dadmin/v2'';'
+  profile-1: "server {\n    listen 6443 ssl;\n    ssl_certificate /run/platform/tls.crt;\n\
+    \    ssl_certificate_key /run/platform/tls.key;\n    location / { root /opt/out/instance/html;\
+    \ index index.html; }\n    location /dadmin/ {\n        proxy_pass https://pd-pingdirectory.identity-blue.svc.cluster.local:443;\n\
+    \        proxy_ssl_verify on;\n        proxy_ssl_trusted_certificate /run/platform/ca.crt;\n\
+    \        proxy_ssl_server_name on;\n        proxy_ssl_name pd-pingdirectory.identity-blue.svc.cluster.local;\n\
+    \        proxy_set_header Authorization $http_authorization;\n    }\n}\n"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: delegator
+  namespace: identity-delegator
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: delegator
+  template:
+    metadata:
+      labels:
+        app: delegator
+      annotations:
+        checksum/profile: c2a5d705900c48e09cfc1b35c9878b633a47d05d8dd0ee388a1bd315cf9d4b38
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 9031
+        runAsGroup: 0
+        fsGroup: 0
+      containers:
+      - name: delegator
+        image: pingidentity/pingdelegator:2609@sha256:dde501436b268b188d5373ae11bbe805f5d66afb998caa60b38aea77dd9c7cb2
+        env:
+        - name: PING_IDENTITY_ACCEPT_EULA
+          value: 'YES'
+        - name: VERBOSE
+          value: 'false'
+        - name: PING_DEBUG
+          value: 'false'
+        - name: CERTIFICATE_FILE
+          value: /run/platform/tls.crt
+        - name: CERTIFICATE_KEY_FILE
+          value: /run/platform/tls.key
+        ports:
+        - containerPort: 6443
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+        volumeMounts:
+        - name: profile
+          mountPath: /opt/in
+          readOnly: true
+        - name: runtime
+          mountPath: /run/platform
+          readOnly: true
+        startupProbe:
+          tcpSocket:
+            port: 6443
+          periodSeconds: 10
+          failureThreshold: 60
+        readinessProbe:
+          httpGet:
+            path: /delegator/
+            port: 6443
+            scheme: HTTPS
+      volumes:
+      - name: profile
+        configMap:
+          name: delegator-profile
+          defaultMode: 493
+          items:
+          - key: profile-0
+            path: instance/html/delegator/config.js
+          - key: profile-1
+            path: instance/etc/conf.d/default.conf
+      - name: runtime
+        secret:
+          secretName: delegator-runtime
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: delegator
+  namespace: identity-delegator
+spec:
+  selector:
+    app: delegator
+  ports:
+  - name: https
+    port: 6443
+    targetPort: 6443

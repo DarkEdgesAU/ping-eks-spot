@@ -7,7 +7,7 @@ spec:
   project: ping-workloads
   source:
     repoURL: https://github.com/darkedges/pingdirectory-eks-spot.git
-    targetRevision: feature/pingfederate
+    targetRevision: main
     path: gitops/workloads/pd-proxy
     directory:
       recurse: false

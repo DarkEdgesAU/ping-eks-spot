@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: logging
+  namespace: argocd
+spec:
+  project: observability
+  source:
+    repoURL: https://github.com/darkedges/pingdirectory-eks-spot.git
+    targetRevision: main
+    path: gitops/workloads/logging
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: logging
+  syncPolicy:
+    syncOptions:
+    - RespectIgnoreDifferences=true
+    - FailOnSharedResource=true
+  ignoreDifferences:
+  - group: apps
+    kind: StatefulSet
+    jsonPointers:
+    - /spec/replicas

@@ -11,12 +11,51 @@ JMETER ?= jmeter
 setup:
 	$(PYTHON) -m pip install -r requirements.txt
 	$(PYTHON) -c "from pathlib import Path; import shutil; p = Path('config.json'); shutil.copyfile('config.example.json', p) if not p.exists() else None"
+.PHONY: oauth-client-secrets
+oauth-client-secrets:
+	$(PYTHON) scripts/oauth_client_secrets.py
 validate:
 	$(PYTHON) scripts/project.py validate
 	$(PYTHON) scripts/federate.py validate
 	$(PYTHON) scripts/access.py validate
 	$(PYTHON) scripts/gitops.py validate
+	$(PYTHON) scripts/observability.py render
+	$(PYTHON) scripts/platform_services.py render
 	$(PYTHON) -m unittest discover -s tests -v
+
+.PHONY: logging-prepare logging-enable logging-secrets logging-render logging-ingress logging-local-test logging-verify
+.PHONY: platform-render platform-prepare platform-secrets platform-ingress metrics-enable delegator-enable central-enable
+platform-render:
+	$(PYTHON) scripts/platform_services.py render
+platform-prepare:
+	$(PYTHON) scripts/platform_services.py prepare
+platform-secrets:
+	$(PYTHON) scripts/platform_services.py secrets
+platform-ingress:
+	$(PYTHON) scripts/platform_services.py ingress
+metrics-enable:
+	$(PYTHON) scripts/platform_services.py enable --service metrics
+delegator-enable:
+	$(PYTHON) scripts/platform_services.py enable --service delegator
+central-enable:
+	$(PYTHON) scripts/platform_services.py enable --service pingcentral
+.PHONY: platform-local-test
+platform-local-test:
+	$(PYTHON) scripts/platform_smoke.py
+logging-prepare:
+	$(PYTHON) scripts/observability.py prepare
+logging-enable:
+	$(PYTHON) scripts/observability.py enable
+logging-secrets:
+	$(PYTHON) scripts/observability.py secrets
+logging-render:
+	$(PYTHON) scripts/observability.py render
+logging-ingress:
+	$(PYTHON) scripts/observability.py ingress
+logging-local-test:
+	$(PYTHON) scripts/logging_smoke.py
+logging-verify:
+	$(PYTHON) scripts/logging_verify.py
 terraform-init:
 	terraform -chdir=terraform init
 	terraform -chdir=terraform-federate init

@@ -1,0 +1,102 @@
+{
+  "hashes": [
+    {
+      "client_id": "pingaccessAc",
+      "alias": "oauth-client-pingaccessac",
+      "variable": "OAUTH_CLIENT_HASH_PINGACCESSAC",
+      "file": "oauth-client-pingaccessac.hash"
+    },
+    {
+      "client_id": "cc_secret_client",
+      "alias": "oauth-client-cc-secret-client",
+      "variable": "OAUTH_CLIENT_HASH_CC_SECRET_CLIENT",
+      "file": "oauth-client-cc-secret-client.hash"
+    },
+    {
+      "client_id": "rs_client",
+      "alias": "oauth-client-rs-client",
+      "variable": "OAUTH_CLIENT_HASH_RS_CLIENT",
+      "file": "oauth-client-rs-client.hash"
+    },
+    {
+      "client_id": "ac_oic_client",
+      "alias": "oauth-client-ac-oic-client",
+      "variable": "OAUTH_CLIENT_HASH_AC_OIC_CLIENT",
+      "file": "oauth-client-ac-oic-client.hash"
+    },
+    {
+      "client_id": "pingdirectory",
+      "alias": "oauth-client-pingdirectory",
+      "variable": "OAUTH_CLIENT_HASH_PINGDIRECTORY",
+      "file": "oauth-client-pingdirectory.hash"
+    }
+  ],
+  "jwks": [
+    {
+      "client_id": "cc_jwt_client",
+      "alias": "oauth-client-cc-jwt-client",
+      "variable": "OAUTH_CLIENT_JWKS_CC_JWT_CLIENT",
+      "file": "oauth-client-cc-jwt-client.jwks",
+      "keys": [
+        {
+          "kty": "RSA",
+          "kid": "k1"
+        }
+      ]
+    },
+    {
+      "client_id": "ac_oic_client",
+      "alias": "oauth-client-ac-oic-client",
+      "variable": "OAUTH_CLIENT_JWKS_AC_OIC_CLIENT",
+      "file": "oauth-client-ac-oic-client.jwks",
+      "keys": [
+        {
+          "kty": "RSA",
+          "kid": "k1",
+          "use": "sig"
+        },
+        {
+          "kty": "RSA",
+          "kid": "k2",
+          "use": "enc"
+        },
+        {
+          "kty": "EC",
+          "kid": "k3",
+          "use": "enc"
+        }
+      ]
+    },
+    {
+      "client_id": "im_oic_client",
+      "alias": "oauth-client-im-oic-client",
+      "variable": "OAUTH_CLIENT_JWKS_IM_OIC_CLIENT",
+      "file": "oauth-client-im-oic-client.jwks",
+      "keys": [
+        {
+          "kty": "RSA",
+          "kid": "k1",
+          "use": "sig"
+        },
+        {
+          "kty": "RSA",
+          "kid": "k2",
+          "use": "enc"
+        },
+        {
+          "kty": "EC",
+          "kid": "k3",
+          "use": "enc"
+        }
+      ]
+    }
+  ],
+  "reversible": [
+    {
+      "client_id": "ac_oic_client",
+      "alias": "oauth-client-ac-oic-client",
+      "variable": "OAUTH_CLIENT_REVERSIBLE_AC_OIC_CLIENT",
+      "file": "oauth-client-ac-oic-client.reversible"
+    }
+  ]
+}

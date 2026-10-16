@@ -1,12 +1,67 @@
 import copy
+import json
 from pathlib import Path
 import sys
 import unittest
+import tempfile
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 import recovery
 
 
 class RecoveryTests(unittest.TestCase):
+    def inventory(self, folder, namespaces):
+        for ns in namespaces:
+            (folder/f'{ns}-resources.json').write_text(json.dumps({'items': []}))
+        (folder/'persistent-volumes.json').write_text(json.dumps({'items': []}))
+
+    def test_historical_backup_without_optional_services_remains_usable(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.inventory(root, (*recovery.CORE_NAMESPACES, 'argocd'))
+            docs, volumes = recovery.prepare(root)
+        self.assertEqual(volumes, [])
+        self.assertEqual({d['metadata']['name'] for d in docs['00-namespaces.yaml']},
+                         set(recovery.CORE_NAMESPACES) | {'argocd'})
+
+    def test_optional_state_and_original_secrets_are_recovered(self):
+        targets = ['identity-access-blue', 'identity-access-green', 'identity-central', 'logging', 'monitoring']
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.inventory(root, (*recovery.CORE_NAMESPACES, *targets, 'argocd'))
+            pvs = []
+            for i, ns in enumerate(targets):
+                pv = {'metadata': {'name': f'pv-{i}'}, 'spec': {
+                    'csi': {'driver': 'ebs.csi.aws.com', 'volumeHandle': f'vol-{i}'},
+                    'claimRef': {'name': 'data', 'namespace': ns, 'uid': 'old'},
+                    'nodeAffinity': {'required': {'nodeSelectorTerms': [{'matchExpressions': [
+                        {'key': 'topology.kubernetes.io/zone', 'operator': 'In', 'values': ['ap-southeast-2b']}]}]}}}}
+                pvs.append(pv)
+                (root/f'{ns}-resources.json').write_text(json.dumps({'items': [
+                    {'kind': 'PersistentVolumeClaim', 'metadata': {'name': 'data', 'namespace': ns},
+                     'spec': {'volumeName': f'pv-{i}', 'accessModes': ['ReadWriteOnce']}},
+                    {'kind': 'Secret', 'metadata': {'name': 'runtime', 'namespace': ns},
+                     'data': {'password': 'b3JpZ2luYWw='}}]}))
+            (root/'persistent-volumes.json').write_text(json.dumps({'items': pvs}))
+            docs, volumes = recovery.prepare(root)
+        self.assertEqual(set(volumes), {f'vol-{i}' for i in range(len(targets))})
+        self.assertEqual({d['metadata']['namespace'] for d in docs['20-runtime-secrets.yaml']}, set(targets))
+        for d in docs['20-runtime-secrets.yaml']:
+            self.assertEqual(d['data']['password'], 'b3JpZ2luYWw=')
+        restored_pvs = [d for d in docs['30-retained-claims.yaml'] if d['kind'] == 'PersistentVolume']
+        self.assertEqual(len(restored_pvs), len(targets))
+        for d in restored_pvs:
+            self.assertEqual(d['spec']['persistentVolumeReclaimPolicy'], 'Retain')
+            self.assertEqual(d['spec']['nodeAffinity'], pvs[0]['spec']['nodeAffinity'])
+
+    def test_optional_namespace_inventory_cannot_be_skipped_when_a_pv_exists(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.inventory(root, (*recovery.CORE_NAMESPACES, 'argocd'))
+            (root/'persistent-volumes.json').write_text(json.dumps({'items': [
+                {'spec': {'claimRef': {'namespace': 'identity-central'}}}]}))
+            with self.assertRaisesRegex(ValueError, 'Missing namespace inventory: identity-central'):
+                recovery.prepare(root)
+
     def test_retained_binding_strips_old_cluster_identity_without_changing_disk_or_zone(self):
         pv={'metadata':{'name':'pv-one','uid':'old-uid','finalizers':['old']},'spec':{
             'csi':{'driver':'ebs.csi.aws.com','volumeHandle':'vol-original'},

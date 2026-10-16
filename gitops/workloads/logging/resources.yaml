@@ -1,0 +1,338 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logging-config
+  namespace: logging
+data:
+  opensearch.yml: 'cluster.name: ping-logs-poc
+
+    node.name: opensearch
+
+    network.host: 0.0.0.0
+
+    discovery.type: single-node
+
+    # Small POC: avoid a privileged vm.max_map_count init container.
+
+    node.store.allow_mmap: false
+
+    plugins.security.ssl.transport.pemcert_filepath: tls/opensearch.crt
+
+    plugins.security.ssl.transport.pemkey_filepath: tls/opensearch.key
+
+    plugins.security.ssl.transport.pemtrustedcas_filepath: tls/ca.crt
+
+    plugins.security.ssl.transport.enforce_hostname_verification: true
+
+    plugins.security.ssl.http.enabled: true
+
+    plugins.security.ssl.http.pemcert_filepath: tls/opensearch.crt
+
+    plugins.security.ssl.http.pemkey_filepath: tls/opensearch.key
+
+    plugins.security.ssl.http.pemtrustedcas_filepath: tls/ca.crt
+
+    plugins.security.nodes_dn: [CN=opensearch]
+
+    plugins.security.authcz.admin_dn: [CN=opensearch-admin]
+
+    plugins.security.allow_default_init_securityindex: true
+
+    plugins.security.restapi.roles_enabled: [all_access, security_rest_api_access]
+
+    '
+  prepare-config.sh: "#!/bin/sh\nset -eu\ncp -R /usr/share/opensearch/config/. /work/\n\
+    cp /poc/opensearch.yml /work/opensearch.yml\ncp /auth/internal_users.yml /work/opensearch-security/internal_users.yml\n\
+    cat >> /work/opensearch-security/roles.yml <<'EOF'\n\nlog_writer:\n  cluster_permissions:\
+    \ [cluster_monitor]\n  index_permissions:\n    - index_patterns: ['logs-*']\n\
+    \      allowed_actions: [crud, create_index]\nEOF\ncat >> /work/opensearch-security/roles_mapping.yml\
+    \ <<'EOF'\n\nlog_writer:\n  backend_roles: [log_writer]\nEOF\n"
+  dashboards.yml: 'server.host: 0.0.0.0
+
+    server.ssl.enabled: true
+
+    server.ssl.certificate: /tls/dashboards.crt
+
+    server.ssl.key: /tls/dashboards.key
+
+    opensearch.hosts: [''https://opensearch.logging.svc.cluster.local:9200'']
+
+    opensearch.ssl.verificationMode: full
+
+    opensearch.ssl.certificateAuthorities: [/tls/ca.crt]
+
+    opensearch.username: kibanaserver
+
+    opensearch.password: ${DASHBOARDS_PASSWORD}
+
+    opensearch.requestHeadersAllowlist: [authorization, securitytenant]
+
+    opensearch_security.cookie.secure: true
+
+    '
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: opensearch
+  namespace: logging
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  selector:
+    matchLabels:
+      app: opensearch
+  template:
+    metadata:
+      labels:
+        app: opensearch
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+      - name: prepare-config
+        image: opensearchproject/opensearch:3.6.0
+        command:
+        - sh
+        - /poc/prepare-config.sh
+        volumeMounts:
+        - name: config
+          mountPath: /work
+        - name: settings
+          mountPath: /poc
+        - name: auth
+          mountPath: /auth
+      containers:
+      - name: opensearch
+        image: opensearchproject/opensearch:3.6.0
+        env:
+        - name: DISABLE_INSTALL_DEMO_CONFIG
+          value: 'true'
+        - name: OPENSEARCH_JAVA_OPTS
+          value: -Xms512m -Xmx512m
+        ports:
+        - containerPort: 9200
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1536Mi
+          limits:
+            memory: 3Gi
+        readinessProbe:
+          tcpSocket:
+            port: 9200
+          initialDelaySeconds: 20
+        volumeMounts:
+        - name: config
+          mountPath: /usr/share/opensearch/config
+        - name: tls
+          mountPath: /usr/share/opensearch/config/tls
+          readOnly: true
+        - name: data
+          mountPath: /usr/share/opensearch/data
+      volumes:
+      - name: config
+        emptyDir: {}
+      - name: settings
+        configMap:
+          name: logging-config
+      - name: auth
+        secret:
+          secretName: logging-auth
+      - name: tls
+        secret:
+          secretName: logging-tls
+  replicas: 1
+  serviceName: opensearch
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: pingdirectory-ebs
+      resources:
+        requests:
+          storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboards
+  namespace: logging
+spec:
+  selector:
+    matchLabels:
+      app: dashboards
+  template:
+    metadata:
+      labels:
+        app: dashboards
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: dashboards
+        image: opensearchproject/opensearch-dashboards:3.6.0
+        env:
+        - name: DASHBOARDS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: logging-auth
+              key: dashboards-password
+        ports:
+        - containerPort: 5601
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            memory: 1536Mi
+        readinessProbe:
+          httpGet:
+            path: /app/login
+            port: 5601
+            scheme: HTTPS
+          initialDelaySeconds: 30
+        volumeMounts:
+        - name: settings
+          mountPath: /usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
+          subPath: dashboards.yml
+        - name: tls
+          mountPath: /tls
+          readOnly: true
+      volumes:
+      - name: settings
+        configMap:
+          name: logging-config
+      - name: tls
+        secret:
+          secretName: logging-tls
+  replicas: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opensearch
+  namespace: logging
+spec:
+  selector:
+    app: opensearch
+  ports:
+  - port: 9200
+    targetPort: 9200
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboards
+  namespace: logging
+spec:
+  selector:
+    app: dashboards
+  ports:
+  - port: 5601
+    targetPort: 5601
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-log-collector
+  namespace: logging
+data:
+  sidecar.conf: "[SERVICE]\n    Flush 2\n    Log_Level info\n    Parsers_File /fluent-bit/etc/poc/parsers.conf\n\
+    \    storage.path /buffers/chunks\n    HTTP_Server On\n    HTTP_Listen 0.0.0.0\n\
+    \    HTTP_Port 2020\n\n[INPUT]\n    Name tail\n    Path /var/log/containers/*.log\n\
+    \    Tag kube.containers\n    Parser cri\n    Path_Key source_file\n    DB /buffers/node.db\n\
+    \    Read_from_Head Off\n    Skip_Long_Lines On\n    storage.type filesystem\n\
+    [FILTER]\n    Name parser\n    Match *\n    Key_Name source_file\n    Parser kube_path\n\
+    \    Reserve_Data On\n    Preserve_Key On\n\n[FILTER]\n    Name modify\n    Match\
+    \ *\n    Add stream container\n    Add node ${NODE_NAME}\n\n[OUTPUT]\n    Name\
+    \ opensearch\n    Match *\n    Host opensearch.logging.svc.cluster.local\n   \
+    \ Port 9200\n    HTTP_User logshipper\n    HTTP_Passwd ${LOG_PASSWORD}\n    tls\
+    \ On\n    tls.verify On\n    tls.verify_hostname On\n    tls.ca_file /credentials/ca.crt\n\
+    \    Logstash_Format On\n    Logstash_Prefix logs-containers\n    Suppress_Type_Name\
+    \ On\n    Generate_ID On\n    Retry_Limit False\n    storage.total_limit_size\
+    \ 128M\n"
+  parsers.conf: "[PARSER]\n    Name cri\n    Format regex\n    Regex ^(?<time>[^ ]+)\
+    \ (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$\n    Time_Key time\n \
+    \   Time_Format %Y-%m-%dT%H:%M:%S.%L%z\n\n[PARSER]\n    Name kube_path\n    Format\
+    \ regex\n    Regex ^/var/log/containers/(?<pod>[^_]+)_(?<namespace>[^_]+)_(?<container>.+)-(?<container_id>[a-f0-9]+)\\\
+    .log$\n"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-log-collector
+  namespace: logging
+spec:
+  selector:
+    matchLabels:
+      app: node-log-collector
+  template:
+    metadata:
+      labels:
+        app: node-log-collector
+    spec:
+      automountServiceAccountToken: false
+      tolerations:
+      - operator: Exists
+      containers:
+      - name: collector
+        image: fluent/fluent-bit:4.2.3
+        args:
+        - -c
+        - /fluent-bit/etc/poc/sidecar.conf
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: LOG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: log-shipper
+              key: password
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 192Mi
+        volumeMounts:
+        - name: logs
+          mountPath: /var/log
+          readOnly: true
+        - name: cfg
+          mountPath: /fluent-bit/etc/poc
+          readOnly: true
+        - name: auth
+          mountPath: /credentials
+          readOnly: true
+        - name: buffer
+          mountPath: /buffers
+      volumes:
+      - name: logs
+        hostPath:
+          path: /var/log
+          type: Directory
+      - name: cfg
+        configMap:
+          name: node-log-collector
+      - name: auth
+        secret:
+          secretName: log-shipper
+      - name: buffer
+        emptyDir:
+          sizeLimit: 256Mi

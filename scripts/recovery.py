@@ -6,8 +6,10 @@ import json
 from pathlib import Path
 import yaml
 
-WORKLOAD_NAMESPACES=('identity-blue','identity-green','identity-proxy',
-                     'identity-federate-blue','identity-federate-green')
+CORE_NAMESPACES=('identity-blue','identity-green','identity-proxy',
+                 'identity-federate-blue','identity-federate-green')
+WORKLOAD_NAMESPACES=(*CORE_NAMESPACES,'identity-access-blue','identity-access-green',
+                     'identity-central','identity-delegator','logging','monitoring')
 
 
 def clean_secret(resource):
@@ -44,7 +46,13 @@ def prepare(backup):
     namespaces=[]; secrets=[]; runtime=[]; claims=[]; volumes=[]
     for namespace in (*WORKLOAD_NAMESPACES,'argocd'):
         source=backup/f'{namespace}-resources.json'
-        if not source.is_file(): raise ValueError('Missing namespace inventory: '+namespace)
+        if not source.is_file():
+            # Older backups predate optional services. But a saved PV belonging
+            # to one proves its inventory is required for safe recovery.
+            retained=any(pv.get('spec',{}).get('claimRef',{}).get('namespace')==namespace for pv in pvs)
+            if namespace in (*CORE_NAMESPACES,'argocd') or retained:
+                raise ValueError('Missing namespace inventory: '+namespace)
+            continue
         namespaces.append({'apiVersion':'v1','kind':'Namespace','metadata':{'name':namespace}})
         resources=json.loads(source.read_text())['items']
         for resource in resources:

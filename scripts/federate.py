@@ -126,6 +126,8 @@ def local_secrets(c):
 
 
 def values(c, colour, repository=None):
+    import platform_services
+    platform = platform_services.config()
     directory = project.config()
     env = {'PING_IDENTITY_ACCEPT_EULA':'YES' if directory['accept_eula'] else 'NO',
            'SERVER_PROFILE_URL':'', 'SECRETS_DIR':'/run/ping-secrets',
@@ -133,6 +135,8 @@ def values(c, colour, repository=None):
            'PF_ADMIN_PUBLIC_HOSTNAME':admin_hostname(c,colour), 'PF_ADMIN_PUBLIC_PORT_HTTPS':'443',
            'PF_ADMIN_PUBLIC_BASEURL':f'https://{admin_hostname(c,colour)}',
            'PF_ENGINE_PUBLIC_HOSTNAME':c['engine_hostname'], 'PF_ENGINE_PUBLIC_PORT_HTTPS':'443',
+           'PD_DELEGATOR_PUBLIC_HOSTNAME':platform['delegator_hostname'],
+           'PD_DELEGATOR_PUBLIC_PORT_HTTPS':'443',
            'USER_BASE_DN':directory['base_dn'], 'PF_NODE_GROUP_ID':colour,
            'PD_ENGINE_PRIVATE_HOSTNAME':'pd-pingdirectoryproxy.identity-proxy.svc.cluster.local',
            'PD_ENGINE_PRIVATE_PORT_LDAP':'636', 'VERBOSE':'false',
@@ -244,11 +248,15 @@ def render(c, colour, repository=None):
                           '--kube-version','1.35.0','-f',p],capture=True)
     result += '\n---\n'+yaml.safe_dump(bootstrap_hooks(colour),sort_keys=False)
     docs = list(yaml.safe_load_all(result))
+    import observability
+    docs = observability.attach(docs, namespace=namespace(colour))
+    import platform_services
+    docs = platform_services.attach(docs, namespace=namespace(colour))
     for doc in docs:
         if doc and doc['kind'] in ('StatefulSet','Deployment'):
             spec=doc['spec']['template']['spec']
             if len(spec.get('initContainers',[])) == 0: raise ValueError('Missing secret copy init')
-    (project.BUILD/f'pf-{colour}.manifests.yaml').write_text(result)
+    (project.BUILD/f'pf-{colour}.manifests.yaml').write_text(yaml.safe_dump_all(docs,sort_keys=False))
     return p
 
 
