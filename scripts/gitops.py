@@ -11,6 +11,7 @@ import subprocess
 import yaml
 import project
 import federate
+import access
 
 ROOT=project.ROOT
 GITOPS=ROOT/'gitops'
@@ -18,7 +19,8 @@ CHART=ROOT/'vendor/argo-cd-10.4.1.tgz'
 CHART_SHA='6ccb3ee39efdf1c3bbc1e69b1a5ffdf172e52fac6873d3c2a0bb8dad40ba5af0'
 NAMESPACE='argocd'
 APPS={'pd-blue':'identity-blue','pd-green':'identity-green','pd-proxy':'identity-proxy',
-      'pf-blue':'identity-federate-blue','pf-green':'identity-federate-green'}
+      'pf-blue':'identity-federate-blue','pf-green':'identity-federate-green',
+      'pa-blue':'identity-access-blue','pa-green':'identity-access-green'}
 
 
 def config():
@@ -110,7 +112,7 @@ def app_project(c):
 
 def protect(doc):
     if doc['kind']=='Secret': raise ValueError('Secret manifests may never enter GitOps exports')
-    if doc['metadata']['name'] in ('pd-routing','pf-active-admin','pf-active-engine'):
+    if doc['metadata']['name'] in ('pd-routing','pf-active-admin','pf-active-engine','pa-active-admin','pa-active-engine'):
         raise ValueError('Runtime routing must not be reconciled by Argo CD')
     if doc['kind'] in ('StatefulSet','PersistentVolumeClaim'):
         annotations=doc['metadata'].get('annotations') or {}
@@ -126,17 +128,20 @@ def protect(doc):
 
 def export(c):
     directory=project.config(); pf=federate.config()
-    repos={product:f'{c["ecr_prefix"]}/{product}' for product in ('pingdirectory','pingdirectoryproxy','pingfederate')}
+    repos={product:f'{c["ecr_prefix"]}/{product}' for product in ('pingdirectory','pingdirectoryproxy','pingfederate','pingaccess')}
     if not c['ecr_prefix'].endswith('/'+directory['cluster_name']):
         raise ValueError('ECR prefix must match the configured cluster')
     for name,ns in APPS.items():
-        colour=name.removeprefix('pd-').removeprefix('pf-')
+        colour=name.removeprefix('pd-').removeprefix('pf-').removeprefix('pa-')
         if name.startswith('pd-'):
             project.render(directory,colour,repos)
             source=project.BUILD/f'{colour}.manifests.yaml'
-        else:
+        elif name.startswith('pf-'):
             federate.render(pf,colour,repos['pingfederate'])
             source=project.BUILD/f'pf-{colour}.manifests.yaml'
+        else:
+            access.render(access.config(),colour,repos['pingaccess'])
+            source=project.BUILD/f'pa-{colour}.manifests.yaml'
         docs=[protect(doc) for doc in yaml.safe_load_all(source.read_text()) if doc]
         folder=GITOPS/'workloads'/name
         folder.mkdir(parents=True,exist_ok=True)
@@ -155,7 +160,7 @@ def export(c):
         application_yaml=yaml.safe_dump(application(c,name,ns),sort_keys=False)
         if not application_file.exists() or application_file.read_text()!=application_yaml:
             application_file.write_text(application_yaml,newline='\n')
-    print('Exported five secret-free applications. Review and commit gitops/ before syncing; nothing was deployed.')
+    print(f'Exported {len(APPS)} secret-free applications. Review and commit gitops/ before syncing; nothing was deployed.')
 
 
 def validate(c):

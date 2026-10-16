@@ -22,6 +22,13 @@ def namespace(colour):
     return f'identity-federate-{colour}'
 
 
+def admin_hostname(c, colour):
+    label, domain = c['admin_hostname'].split('.', 1)
+    if label.endswith('-admin'):
+        return f'{label[:-6]}-{colour}-admin.{domain}'
+    return f'{label}-{colour}.{domain}'
+
+
 def tls_name(colour):
     return SECRET/f'federate-{colour}-{namespace(colour)}'
 SECRET = ROOT/'.secrets'
@@ -73,7 +80,8 @@ def local_secrets(c):
             ext = name.with_suffix('.cnf')
             sans = ['DNS:localhost', f'DNS:{c["admin_hostname"]}', f'DNS:{c["engine_hostname"]}']
             if colour != 'signing':
-                sans += [f'DNS:pf-{colour}-pingfederate-admin.{namespace(colour)}.svc.cluster.local',
+                sans += [f'DNS:{admin_hostname(c,colour)}',
+                         f'DNS:pf-{colour}-pingfederate-admin.{namespace(colour)}.svc.cluster.local',
                          f'DNS:pf-{colour}-pingfederate-engine.{namespace(colour)}.svc.cluster.local',
                          f'DNS:*.pf-{colour}-pingfederate-cluster.{namespace(colour)}.svc.cluster.local']
             ext.write_text('subjectAltName='+','.join(sans)+'\nbasicConstraints=CA:FALSE\n'
@@ -121,9 +129,9 @@ def values(c, colour, repository=None):
     directory = project.config()
     env = {'PING_IDENTITY_ACCEPT_EULA':'YES' if directory['accept_eula'] else 'NO',
            'SERVER_PROFILE_URL':'', 'SECRETS_DIR':'/run/ping-secrets',
-           'LICENSE_DIR':'/run/ping-secrets', 'ROOT_USER':'Administrator',
-           'PF_ADMIN_PUBLIC_HOSTNAME':c['admin_hostname'], 'PF_ADMIN_PUBLIC_PORT_HTTPS':'443',
-           'PF_ADMIN_PUBLIC_BASEURL':f'https://{c["admin_hostname"]}',
+           'ROOT_USER':'Administrator',
+           'PF_ADMIN_PUBLIC_HOSTNAME':admin_hostname(c,colour), 'PF_ADMIN_PUBLIC_PORT_HTTPS':'443',
+           'PF_ADMIN_PUBLIC_BASEURL':f'https://{admin_hostname(c,colour)}',
            'PF_ENGINE_PUBLIC_HOSTNAME':c['engine_hostname'], 'PF_ENGINE_PUBLIC_PORT_HTTPS':'443',
            'USER_BASE_DN':directory['base_dn'], 'PF_NODE_GROUP_ID':colour,
            'PD_ENGINE_PRIVATE_HOSTNAME':'pd-pingdirectoryproxy.identity-proxy.svc.cluster.local',
@@ -192,7 +200,7 @@ def ingress(c, role, colour=None, active=True):
         raise ValueError('Set ACM origin certificate ARN and current Cloudflare IPv4 ranges')
     if role=='admin' and not (c['admin_access_configured'] or c.get('proxy_only') is True):
         raise ValueError('Configure Cloudflare Access or explicit proxy_only=true before enabling public admin ingress')
-    return {'apiVersion':'networking.k8s.io/v1','kind':'Ingress',
+    resource = {'apiVersion':'networking.k8s.io/v1','kind':'Ingress',
         'metadata':{'name':f'pf-{role}','namespace':namespace(colour),'annotations':{
             'identity.darkedges.com/routing-state':'active' if active else 'standby',
             'alb.ingress.kubernetes.io/group.name':f'pf-{role}',
@@ -213,6 +221,13 @@ def ingress(c, role, colour=None, active=True):
             'http':{'paths':[{'path':'/','pathType':'Prefix','backend':{'service':{
                 'name':f'pf-{colour}-pingfederate-{role}' if active else 'pf-standby',
                 'port':({'number':9999 if role=='admin' else 9031} if active else {'name':'use-annotation'})}}}]}}]}}
+    if role == 'admin':
+        # Fixed per-colour routes remain usable when the shared hostname promotes.
+        resource['spec']['rules'].append({
+            'host':admin_hostname(c,colour),
+            'http':{'paths':[{'path':'/','pathType':'Prefix','backend':{'service':{
+                'name':f'pf-{colour}-pingfederate-admin','port':{'number':9999}}}}]}})
+    return resource
 
 
 def bootstrap_hooks(colour):

@@ -1,5 +1,12 @@
 # PingDirectory EKS Spot development project
 
+PingAccess blue/green namespaces, profiles, Argo CD applications and public ALB
+ingress are described in [docs/PINGACCESS.md](docs/PINGACCESS.md). Start with
+`access.example.json` and `make pa-render`; runtime secrets, image publication,
+licensed cluster startup and application configuration are explicit deployment
+steps. The PA starter does not yet configure CA-signed internal listeners or a
+working protected application/PingFederate integration.
+
 A workspace for Terraform-managed EKS, PingDirectory and PingFederate profiles,
 and Argo CD deployments across three AWS Availability Zones. Argo CD manages
 versioned workloads; explicit verification gates control blue/green promotion.
@@ -220,7 +227,7 @@ LDAPTLS_CACERT=.secrets/ca.crt ldapsearch -H ldaps://localhost:1636 \
 | Hostname                   | Service             |
 | -------------------------- | ------------------- |
 | `argocd.eks.darkedges.com` | Argo CD             |
-| `admin.eks.darkedges.com`  | PingFederate admin  |
+| `pingfederate-admin.eks.darkedges.com`  | PingFederate admin  |
 | `id.eks.darkedges.com`     | PingFederate engine |
 
 Supply ACM origin certificate ARNs in ap-southeast-2 covering the relevant
@@ -268,6 +275,10 @@ described in [docs/PINGFEDERATE.md](docs/PINGFEDERATE.md). Directory and PF
 promotions are independent. Argo does not revert their runtime routing objects.
 
 ## Tear down the lab
+
+For exact PowerShell commands to rebuild the infrastructure and rebind retained
+data after teardown, follow [docs/RECOVERY.md](docs/RECOVERY.md). Restore original
+secrets and bind the eight current data claims before any Argo sync.
 
 Remove public Ingresses while EKS and the ALB controller still run; wait for
 ALBs and their dependencies to disappear. Remove Argo Applications without

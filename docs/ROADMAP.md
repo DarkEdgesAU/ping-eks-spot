@@ -8,6 +8,11 @@ The initial deployment is a development environment. It does not establish a pro
 
 ## Next implementation gates
 
+PingAccess blue/green scaffolding and acceptance steps are in
+[PINGACCESS.md](PINGACCESS.md). Licensed bootstrap, shared-CA listener assignment,
+verified engine registration, PingFederate integration and protected application
+login/session cutover remain required live acceptance work.
+
 Argo CD bootstrap and protected GitOps exports are documented in
 [ARGOCD.md](ARGOCD.md). Live Helm adoption, ordered sync, Cloudflare Access and
 ALB ingress testing remain acceptance gates.

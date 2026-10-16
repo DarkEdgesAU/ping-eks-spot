@@ -26,7 +26,7 @@ Set `enable_federate=true` in AWS tfvars, then use the existing reviewed AWS
 plan/apply workflow. Infrastructure Terraform adds ECR and the official ALB
 controller IAM/Pod Identity integration; Kubernetes remains a separate step.
 
-Cloudflare must cover the exact names `admin.eks.darkedges.com` and
+Cloudflare must cover the exact names `pingfederate-admin.eks.darkedges.com` and
 `id.eks.darkedges.com`. Ordinary Universal SSL for `*.darkedges.com` does not
 cover these deeper names. Configure an appropriate edge certificate or delegated
 child zone. Set `origin_certificate_arn` to an ACM certificate in ap-southeast-2
@@ -87,7 +87,7 @@ kubectl -n identity-federate-green get ingress
 ```
 
 This creates two independent public ALBs when admin Access is enabled. Add
-proxied Cloudflare CNAMEs `id.eks` and `admin.eks` to the corresponding ALB DNS
+proxied Cloudflare CNAMEs `id.eks` and `pingfederate-admin.eks` to the corresponding ALB DNS
 names, and disable caching. Initial routing is created once to blue; later
 deploy/ingress commands preserve the active colour.
 
@@ -174,3 +174,21 @@ References: [Ping profiles](https://github.com/pingidentity/pingidentity-server-
 [PF provider](https://registry.terraform.io/providers/pingidentity/pingfederate/1.10.0/docs),
 [ALB annotations](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.16/guide/ingress/annotations/),
 [Cloudflare Origin CA](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/).
+
+## Fixed admin access per colour
+
+`make pf-ingress` also creates host rules for `pingfederate-blue-admin.eks.darkedges.com`
+and `pingfederate-green-admin.eks.darkedges.com`. Both use the shared `pf-admin` ALB, but
+route directly to their respective namespace's admin service regardless of
+promotion. `pingfederate-admin.eks.darkedges.com` continues following the active colour.
+Create proxied Cloudflare CNAMEs `pingfederate-blue-admin.eks` and `pingfederate-green-admin.eks` to the
+admin ALB address. Use Full (strict), cache bypass and native PF authentication
+when proxy-only mode is enabled. The `*.eks.darkedges.com` certificate covers
+these names. These routes provide admin access to the standby colour as well;
+they do not place its engines into public routing.
+
+Each colour now uses its fixed admin hostname as `pf.admin.hostname` and
+`pf.admin.baseurl`, so login/logout redirects remain on that colour. The shared
+admin hostname is an entry point to the active console and may redirect to its
+fixed hostname. Export/commit/sync updated environment ConfigMaps and restart
+admin StatefulSets to adopt canonical URL changes; engine URLs remain shared.

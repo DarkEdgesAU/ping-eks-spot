@@ -14,6 +14,7 @@ setup:
 validate:
 	$(PYTHON) scripts/project.py validate
 	$(PYTHON) scripts/federate.py validate
+	$(PYTHON) scripts/access.py validate
 	$(PYTHON) scripts/gitops.py validate
 	$(PYTHON) -m unittest discover -s tests -v
 terraform-init:
@@ -42,6 +43,20 @@ pf-promote:
 	$(PYTHON) scripts/federate.py promote --target $(TARGET) --evidence "$(EVIDENCE)"
 pf-status:
 	$(PYTHON) scripts/federate.py status
+
+.PHONY: pa-render pa-secrets pa-build-image pa-ingress pa-promote pa-status
+pa-render:
+	$(PYTHON) scripts/access.py render --target $(TARGET)
+pa-secrets:
+	$(PYTHON) scripts/access.py secrets
+pa-build-image:
+	$(PYTHON) scripts/access.py build-image --target $(TARGET)
+pa-ingress:
+	$(PYTHON) scripts/access.py ingress
+pa-promote:
+	$(PYTHON) scripts/access.py promote --target $(TARGET) --evidence "$(EVIDENCE)"
+pa-status:
+	$(PYTHON) scripts/access.py status
 
 .PHONY: gitops-export argocd-render argocd-secrets argocd-bootstrap argocd-ingress argocd-applications
 gitops-export:

@@ -6,6 +6,7 @@
 !*.tfvars.example
 config.json
 federate.json
+access.json
 .env
 .env.*
 !.env.example

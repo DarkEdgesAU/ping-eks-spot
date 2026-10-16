@@ -21,7 +21,7 @@ data:
   PA_ADMIN_PRIVATE_HOSTNAME: pa-blue-pingaccess-admin
   PA_ADMIN_PRIVATE_PORT_CLUSTERCONFIG: '9090'
   PA_ADMIN_PRIVATE_PORT_HTTPS: '9000'
-  PA_ADMIN_PUBLIC_HOSTNAME: pa-admin-blue.eks.darkedges.com
+  PA_ADMIN_PUBLIC_HOSTNAME: pingaccess-blue-admin.eks.darkedges.com
   PA_ADMIN_PUBLIC_PORT_HTTPS: '9000'
   PA_ENGINE_PRIVATE_HOSTNAME: pa-blue-pingaccess-engine
   PA_ENGINE_PRIVATE_PORT_HTTPS: '3000'
@@ -84,7 +84,7 @@ metadata:
 apiVersion: v1
 data:
   OPERATIONAL_MODE: CLUSTERED_CONSOLE
-  PA_ADMIN_PUBLIC_HOSTNAME: pa-admin-blue.eks.darkedges.com
+  PA_ADMIN_PUBLIC_HOSTNAME: pingaccess-blue-admin.eks.darkedges.com
   PA_ENGINE_PUBLIC_HOSTNAME: access.eks.darkedges.com
   PA_RUN_PA_OPERATIONAL_MODE: CLUSTERED_CONSOLE
   PING_DEBUG: 'false'
@@ -104,7 +104,7 @@ metadata:
 apiVersion: v1
 data:
   OPERATIONAL_MODE: CLUSTERED_ENGINE
-  PA_ADMIN_PUBLIC_HOSTNAME: pa-admin-blue.eks.darkedges.com
+  PA_ADMIN_PUBLIC_HOSTNAME: pingaccess-blue-admin.eks.darkedges.com
   PA_ENGINE_PUBLIC_HOSTNAME: access.eks.darkedges.com
   PA_RUN_PA_OPERATIONAL_MODE: CLUSTERED_ENGINE
   PING_DEBUG: 'false'
@@ -212,7 +212,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: afdda562af0ef9b5f64f7b5e91ab733614e868961ae8e662e74e7e785df3718c
+        checksum/config: 6466bf011065a6e2408799bcc13cb720dfc4108b5cb033218d0ff7a6fb254333
       labels:
         app.kubernetes.io/instance: pa-blue
         app.kubernetes.io/managed-by: Helm
@@ -397,7 +397,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: eba95fccf38bfc140396aa01493cb8173e36833bea36037e6e4733b73b6738b8
+        checksum/config: 005823d317067ef23423d23d0b4b7d7a1d0a78253211ac4bfab988a327526c48
       labels:
         app.kubernetes.io/instance: pa-blue
         app.kubernetes.io/managed-by: Helm

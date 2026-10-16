@@ -33,11 +33,22 @@ class MigrationTests(unittest.TestCase):
             root=Path(directory); server=root/'server'; staging=root/'staging'
             key=server/'server/default/data/pf.jwk'; key.parent.mkdir(parents=True)
             key.write_text('retained-rotated-keys')
+            license=server/'server/default/conf/pingfederate.lic'
+            license.parent.mkdir(parents=True)
+            license.write_text('console-uploaded-license')
+            properties=server/'bin/run.properties'; properties.parent.mkdir(parents=True)
+            properties.write_text('pf.admin.hostname=old.example.com\npf.admin.baseurl=https://old.example.com\nkeep=this\n')
             staged=staging/'instance/server/default/data/pf.jwk'; staged.parent.mkdir(parents=True)
             staged.write_text('obsolete-bootstrap-key')
             env={**os.environ,'SERVER_ROOT_DIR':server.as_posix(),'STAGING_DIR':staging.as_posix(),
-                 'CONTAINER_ENV':(root/'env').as_posix(),'PF_ENGINE_PUBLIC_HOSTNAME':'id.eks.darkedges.com'}
+                 'CONTAINER_ENV':(root/'env').as_posix(),'PF_ENGINE_PUBLIC_HOSTNAME':'id.eks.darkedges.com',
+                 'PF_ADMIN_PUBLIC_HOSTNAME':'admin-blue.eks.darkedges.com',
+                 'PF_ADMIN_PUBLIC_BASEURL':'https://admin-blue.eks.darkedges.com'}
             subprocess.run([project.profile_shell(),(project.ROOT/'profiles/pingfederate/hooks/03-build-run-plan.sh.post').as_posix()],
                            env=env,text=True,capture_output=True,check=True)
             self.assertEqual(key.read_text(),'retained-rotated-keys')
             self.assertFalse(staged.exists())
+            self.assertEqual(license.read_text(),'console-uploaded-license')
+            self.assertIn('pf.admin.baseurl=https://admin-blue.eks.darkedges.com',properties.read_text())
+            self.assertIn('keep=this',properties.read_text())
+            self.assertFalse((staging/'instance/server/default/conf/pingfederate.lic').exists())

@@ -1,6 +1,22 @@
 #!/usr/bin/env sh
 set -eu
 set +x
+# Retained instances keep run.properties; reconcile only the admin URL fields.
+if test -f "$SERVER_ROOT_DIR/bin/run.properties"; then
+    sed -i "s|^pf.admin.hostname=.*|pf.admin.hostname=${PF_ADMIN_PUBLIC_HOSTNAME}|;s|^pf.admin.baseurl=.*|pf.admin.baseurl=${PF_ADMIN_PUBLIC_BASEURL}|" \
+        "$SERVER_ROOT_DIR/bin/run.properties"
+fi
+# PF reads its license from the instance conf directory, not LICENSE_DIR.
+# Preserve a license uploaded through the console on retained instances.
+license_relative=server/default/conf/pingfederate.lic
+mkdir -p "$STAGING_DIR/instance/server/default/conf"
+if test -s "$SERVER_ROOT_DIR/$license_relative"; then
+    rm -f "$STAGING_DIR/instance/$license_relative"
+else
+    test -s /run/ping-secrets/pingfederate.lic
+    cp /run/ping-secrets/pingfederate.lic "$STAGING_DIR/instance/$license_relative"
+    chmod 600 "$STAGING_DIR/instance/$license_relative"
+fi
 for file in /run/ping-secrets/vars/*; do
     test -f "$file" || continue
     name=$(basename "$file")

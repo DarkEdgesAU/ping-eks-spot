@@ -1,5 +1,5 @@
 {
-  "admin_hostname": "admin.eks.darkedges.com",
+  "admin_hostname": "pingfederate-admin.eks.darkedges.com",
   "engine_hostname": "id.eks.darkedges.com",
   "product_version": "13.1",
   "base_image_tag": "2609",

@@ -309,7 +309,7 @@ def main():
     BUILD.mkdir(exist_ok=True)
     if a.command == 'validate':
         shell = profile_shell()
-        for product in ('pingdirectory','pingdirectoryproxy','pingfederate'):
+        for product in ('pingdirectory','pingdirectoryproxy','pingfederate','pingaccess'):
             for p in (ROOT/'profiles'/product/'hooks').glob('*.sh*'):
                 run([shell,'-n',p.as_posix()])
         for target in (*COLOURS,'proxy'):
@@ -330,7 +330,7 @@ def main():
         password = run(['aws','ecr','get-login-password','--region',out['region']], capture=True)
         run(['docker','login','--username','AWS','--password-stdin',registry], data=password)
         for product, repo in out['repositories'].items():
-            if product == 'pingfederate':
+            if product in ('pingfederate','pingaccess'):
                 continue  # PF has independently versioned blue/green image tags.
             run(['docker','build','--platform','linux/amd64','--build-arg',f'BASE_TAG={c["base_image_tag"]}',
                  '-f',f'images/{product}.Dockerfile','-t',f'{repo}:{c["image_tag"]}','.'])

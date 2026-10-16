@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -eu
+set +x
+password=$(cat /run/ping-secrets/admin-password)
+case "$password" in *[!A-Za-z0-9_=-]*|'') echo 'Invalid generated password encoding' >&2; exit 1;; esac
+printf "export PING_IDENTITY_PASSWORD='%s'\n" "$password" >> "$CONTAINER_ENV"
+mkdir -p "$STAGING_DIR/instance/conf"
+if test -s "$SERVER_ROOT_DIR/conf/pingaccess.lic"; then
+    rm -f "$STAGING_DIR/instance/conf/pingaccess.lic"
+else
+    cp /run/ping-secrets/pingaccess.lic "$STAGING_DIR/instance/conf/pingaccess.lic"
+    chmod 600 "$STAGING_DIR/instance/conf/pingaccess.lic"
+fi
+# Never replace a retained instance's encryption key or database.
+rm -f "$STAGING_DIR/instance/conf/pa.jwk"

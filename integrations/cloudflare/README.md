@@ -34,3 +34,12 @@ caching on these hosts, and configure tenant-specific origin protection.
 No live Cloudflare changes or backend migration are performed by adding this
 file. Review a plan in the Cloudflare project before applying; its existing
 backend must be initialized using that project's documented workflow.
+
+The ingress hostname update uses `pingfederate-admin.eks.darkedges.com`,
+`pingfederate-blue-admin.eks.darkedges.com`, `pingfederate-green-admin.eks.darkedges.com`,
+`pingaccess-admin.eks.darkedges.com`, `pingaccess-blue-admin.eks.darkedges.com` and
+`pingaccess-green-admin.eks.darkedges.com`. Create proxied CNAMEs for the three
+PF names to the PF admin ALB and the three PA names to the PA admin ALB after
+PA is deployed. The legacy companion `eks.tf` uses `admin` as its DNS key and
+does not automatically create these six names. This repository does not
+modify the external Cloudflare project or its live DNS.

@@ -71,7 +71,19 @@ sleep() { :; }
         self.assertEqual(engine['metadata']['annotations']['alb.ingress.kubernetes.io/backend-protocol'],'HTTPS')
         with self.assertRaises(ValueError): federate.ingress(self.config,'admin')
         self.config['admin_access_configured']=True
-        self.assertEqual(federate.ingress(self.config,'admin')['spec']['rules'][0]['host'],'admin.eks.darkedges.com')
+        self.assertEqual(federate.ingress(self.config,'admin')['spec']['rules'][0]['host'],'pingfederate-admin.eks.darkedges.com')
+
+    def test_fixed_admin_routes_do_not_follow_promotion(self):
+        config={**self.config,'proxy_only':True,'origin_certificate_arn':'arn:test',
+                'cloudflare_ipv4_cidrs':['173.245.48.0/20']}
+        for colour in project.COLOURS:
+            self.assertEqual(federate.admin_hostname(config,colour),f'pingfederate-{colour}-admin.eks.darkedges.com')
+            for active in (False,True):
+                doc=federate.ingress(config,'admin',colour,active)
+                rule=doc['spec']['rules'][1]
+                self.assertEqual(rule['host'],f'pingfederate-{colour}-admin.eks.darkedges.com')
+                self.assertEqual(rule['http']['paths'][0]['backend']['service'],{
+                    'name':f'pf-{colour}-pingfederate-admin','port':{'number':9999}})
 
     def test_candidate_render_has_no_active_routing_or_ingress(self):
         for colour in project.COLOURS:

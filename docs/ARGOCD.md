@@ -3,8 +3,8 @@
 Argo CD serves `https://argocd.eks.darkedges.com` behind Cloudflare and a public
 ALB. Chart 10.4.1 / Argo CD v3.5.2 is vendored and checksum-verified. AWS Terraform
 continues to own infrastructure; the ALB controller and Argo CD are bootstrap
-Helm releases. Argo manages five **manual-sync** Applications: Directory blue,
-Directory green, Directory Proxy, Federate blue and Federate green.
+Helm releases. Argo manages seven **manual-sync** Applications: Directory blue,
+Directory green, Directory Proxy, Federate blue/green and PingAccess blue/green.
 
 ## What is managed
 
@@ -17,7 +17,7 @@ their source profile/image changes. Build/push immutable images separately.
 
 Use annotation-based Argo resource tracking so the chart's existing Helm labels
 and cluster discovery selectors remain intact. The AppProject permits only this
-repository and five workload namespaces, no cluster-scoped resources or Secrets.
+repository and seven workload namespaces, no cluster-scoped resources or Secrets.
 The following remain outside Argo's reconciliation:
 
 - Terraform AWS infrastructure and PF management-API configuration.
@@ -148,7 +148,7 @@ alone is not a safe routing rollback.
 
 ## Validation and teardown
 
-`make validate` renders all five Ping workloads plus the pinned Argo chart,
+`make validate` renders all seven Ping workloads plus the pinned Argo chart,
 checks protected exports, and runs boundary tests. This does not exercise live
 adoption, Cloudflare authentication, controller readiness or ALB convergence.
 
