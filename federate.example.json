@@ -1,0 +1,14 @@
+{
+  "admin_hostname": "pingfederate-admin.eks.darkedges.com",
+  "engine_hostname": "id.eks.darkedges.com",
+  "public_base_url": "https://access.eks.darkedges.com/identity",
+  "product_version": "13.1",
+  "base_image_tag": "2609",
+  "image_tags": {"blue": "pf-v1", "green": "pf-v1"},
+  "engine_replicas": 3,
+  "admin_storage": "10Gi",
+  "origin_certificate_arn": "",
+  "cloudflare_ipv4_cidrs": [],
+  "admin_access_configured": false,
+  "initial_colour": "blue"
+}

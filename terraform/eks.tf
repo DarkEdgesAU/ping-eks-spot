@@ -109,17 +109,21 @@ resource "aws_eks_node_group" "on_demand" {
   }
   depends_on = [aws_iam_role_policy_attachment.nodes, aws_route_table_association.private]
 }
+locals {
+  core_addon_names = toset(["vpc-cni", "kube-proxy", "coredns", "eks-pod-identity-agent"])
+}
+
 data "aws_eks_addon_version" "core" {
-  for_each           = toset(["vpc-cni", "kube-proxy", "coredns", "eks-pod-identity-agent"])
+  for_each           = local.core_addon_names
   addon_name         = each.key
   kubernetes_version = aws_eks_cluster.main.version
   most_recent        = true
 }
 resource "aws_eks_addon" "core" {
-  for_each                    = data.aws_eks_addon_version.core
+  for_each                    = local.core_addon_names
   cluster_name                = aws_eks_cluster.main.name
   addon_name                  = each.key
-  addon_version               = each.value.version
+  addon_version               = data.aws_eks_addon_version.core[each.key].version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "PRESERVE"
   depends_on                  = [aws_eks_node_group.spot]
@@ -161,7 +165,7 @@ resource "aws_eks_addon" "ebs" {
   depends_on                  = [aws_eks_addon.core, aws_eks_pod_identity_association.ebs, aws_iam_role_policy_attachment.ebs]
 }
 resource "aws_ecr_repository" "images" {
-  for_each             = toset(["pingdirectory", "pingdirectoryproxy"])
+  for_each             = toset(["pingdirectory", "pingdirectoryproxy", "pingfederate", "pingaccess"])
   name                 = "${var.cluster_name}/${each.key}"
   image_tag_mutability = "IMMUTABLE"
   force_delete         = false

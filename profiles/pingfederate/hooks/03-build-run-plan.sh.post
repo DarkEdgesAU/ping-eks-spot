@@ -1,0 +1,38 @@
+#!/usr/bin/env sh
+set -eu
+set +x
+# Retained instances keep run.properties; reconcile only the admin URL fields.
+if test -f "$SERVER_ROOT_DIR/bin/run.properties"; then
+    sed -i "s|^pf.admin.hostname=.*|pf.admin.hostname=${PF_ADMIN_PUBLIC_HOSTNAME}|;s|^pf.admin.baseurl=.*|pf.admin.baseurl=${PF_ADMIN_PUBLIC_BASEURL}|" \
+        "$SERVER_ROOT_DIR/bin/run.properties"
+fi
+# PF reads its license from the instance conf directory, not LICENSE_DIR.
+# Preserve a license uploaded through the console on retained instances.
+license_relative=server/default/conf/pingfederate.lic
+mkdir -p "$STAGING_DIR/instance/server/default/conf"
+if test -s "$SERVER_ROOT_DIR/$license_relative"; then
+    rm -f "$STAGING_DIR/instance/$license_relative"
+else
+    test -s /run/ping-secrets/pingfederate.lic
+    cp /run/ping-secrets/pingfederate.lic "$STAGING_DIR/instance/$license_relative"
+    chmod 600 "$STAGING_DIR/instance/$license_relative"
+fi
+for file in /run/ping-secrets/vars/*; do
+    test -f "$file" || continue
+    name=$(basename "$file")
+    case "$name" in *[!A-Za-z0-9_]*|'') exit 1;; esac
+    value=$(cat "$file")
+    case "$value" in *"'"*) echo 'Invalid generated secret encoding' >&2; exit 1;; esac
+    printf "export %s='%s'\n" "$name" "$value" >> "$CONTAINER_ENV"
+done
+mkdir -p "$STAGING_DIR/instance/server/default/data"
+if test -f "$SERVER_ROOT_DIR/server/default/data/pf.jwk"; then
+    # A retained/restored admin may have rotated keys. Never overwrite them
+    # with the original bootstrap key set from a Kubernetes Secret.
+    rm -f "$STAGING_DIR/instance/server/default/data/pf.jwk"
+else
+    cp /run/ping-secrets/pf.jwk "$STAGING_DIR/instance/server/default/data/pf.jwk"
+    chmod 600 "$STAGING_DIR/instance/server/default/data/pf.jwk"
+fi
+printf '\nPF_ENGINE_BASE_URL=%s\nPD_DELEGATOR_URL=%s\n' \
+  "${PF_ENGINE_PUBLIC_HOSTNAME}:443" "${PF_ENGINE_PUBLIC_HOSTNAME}:443" >> "$CONTAINER_ENV"

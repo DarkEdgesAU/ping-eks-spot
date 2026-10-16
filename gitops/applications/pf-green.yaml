@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pf-green
+  namespace: argocd
+spec:
+  project: ping-workloads
+  source:
+    repoURL: https://github.com/darkedges/pingdirectory-eks-spot.git
+    targetRevision: feature/pingfederate
+    path: gitops/workloads/pf-green
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: identity-federate-green
+  syncPolicy:
+    syncOptions:
+    - RespectIgnoreDifferences=true
+    - FailOnSharedResource=true
+  ignoreDifferences:
+  - group: apps
+    kind: StatefulSet
+    jsonPointers:
+    - /spec/replicas

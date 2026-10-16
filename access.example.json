@@ -1,0 +1,14 @@
+{
+  "admin_hostname": "pingaccess-admin.eks.darkedges.com",
+  "engine_hostname": "access.eks.darkedges.com",
+  "identity_context_root": "/identity",
+  "base_image_tag": "2609",
+  "image_tags": {"blue": "pa-v1", "green": "pa-v1"},
+  "engine_replicas": 3,
+  "admin_storage": "10Gi",
+  "origin_certificate_arn": "",
+  "cloudflare_ipv4_cidrs": [],
+  "proxy_only": true,
+  "admin_access_configured": false,
+  "initial_colour": "blue"
+}

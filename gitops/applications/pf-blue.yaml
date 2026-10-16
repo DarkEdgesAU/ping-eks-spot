@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pf-blue
+  namespace: argocd
+spec:
+  project: ping-workloads
+  source:
+    repoURL: https://github.com/darkedges/pingdirectory-eks-spot.git
+    targetRevision: feature/pingfederate
+    path: gitops/workloads/pf-blue
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: identity-federate-blue
+  syncPolicy:
+    syncOptions:
+    - RespectIgnoreDifferences=true
+    - FailOnSharedResource=true
+  ignoreDifferences:
+  - group: apps
+    kind: StatefulSet
+    jsonPointers:
+    - /spec/replicas

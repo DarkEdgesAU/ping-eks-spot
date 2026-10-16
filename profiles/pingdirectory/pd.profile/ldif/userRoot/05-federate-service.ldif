@@ -1,0 +1,14 @@
+dn: ou=services,${USER_BASE_DN}
+objectClass: top
+objectClass: organizationalUnit
+ou: services
+
+dn: uid=pingfederate,ou=services,${USER_BASE_DN}
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+uid: pingfederate
+cn: PingFederate LDAP Reader
+sn: Service
+userPassword: ${FEDERATE_LDAP_PASSWORD}

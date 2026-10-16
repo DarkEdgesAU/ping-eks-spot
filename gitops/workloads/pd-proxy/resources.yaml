@@ -1,0 +1,393 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  annotations: null
+  labels:
+    app.kubernetes.io/instance: pd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingdirectoryproxy
+    helm.sh/chart: ping-devops-0.16.0
+  name: pd-pingdirectoryproxy
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: pd
+      app.kubernetes.io/name: pingdirectoryproxy
+---
+apiVersion: v1
+data:
+  BASE_ATTRIBUTE: dc
+  BASE_CLASS: domain
+  BASE_VALUE: example
+  KEYSTORE_FILE: /run/ping-secrets/keystore.p12
+  KEYSTORE_PIN_FILE: /run/ping-secrets/keystore.pin
+  LICENSE_DIR: /run/ping-secrets
+  MAKELDIF_USERS: '0'
+  MAX_HEAP_SIZE: 4g
+  PA_ADMIN_PRIVATE_HOSTNAME: pd-pingaccess-admin
+  PA_ADMIN_PRIVATE_PORT_CLUSTERCONFIG: '9090'
+  PA_ADMIN_PRIVATE_PORT_HTTPS: '9000'
+  PA_ADMIN_PUBLIC_HOSTNAME: localhost
+  PA_ADMIN_PUBLIC_PORT_HTTPS: '9000'
+  PA_ENGINE_PRIVATE_HOSTNAME: pd-pingaccess-engine
+  PA_ENGINE_PRIVATE_PORT_HTTPS: '3000'
+  PA_ENGINE_PUBLIC_HOSTNAME: localhost
+  PA_ENGINE_PUBLIC_PORT_HTTPS: '3000'
+  PAZ_ENGINE_PRIVATE_HOSTNAME: pd-pingauthorize
+  PAZ_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PAZ_ENGINE_PUBLIC_HOSTNAME: localhost
+  PAZ_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PAZP_ENGINE_PRIVATE_HOSTNAME: pd-pingauthorizepap
+  PAZP_ENGINE_PRIVATE_PORT_HTTPS: '8443'
+  PAZP_ENGINE_PUBLIC_HOSTNAME: localhost
+  PAZP_ENGINE_PUBLIC_PORT_HTTPS: '8443'
+  PD_CONSOLE_PRIVATE_HOSTNAME: pd-pingdataconsole
+  PD_CONSOLE_PRIVATE_PORT_HTTPS: '8443'
+  PD_CONSOLE_PUBLIC_HOSTNAME: localhost
+  PD_CONSOLE_PUBLIC_PORT_HTTPS: '8443'
+  PD_DELEGATOR_PRIVATE_HOSTNAME: pd-pingdelegator
+  PD_DELEGATOR_PRIVATE_PORT_HTTPS: '6443'
+  PD_DELEGATOR_PUBLIC_HOSTNAME: localhost
+  PD_DELEGATOR_PUBLIC_PORT_HTTPS: '6443'
+  PD_ENGINE_PRIVATE_HOSTNAME: pd-pingdirectory
+  PD_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PD_ENGINE_PRIVATE_PORT_LDAP: '389'
+  PD_ENGINE_PRIVATE_PORT_LDAPS: '636'
+  PD_ENGINE_PUBLIC_HOSTNAME: localhost
+  PD_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PD_LICENSE_DIR: /run/ping-secrets
+  PDP_ENGINE_PRIVATE_HOSTNAME: pd-pingdirectoryproxy
+  PDP_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PDP_ENGINE_PRIVATE_PORT_LDAP: '389'
+  PDP_ENGINE_PRIVATE_PORT_LDAPS: '636'
+  PDP_ENGINE_PUBLIC_HOSTNAME: localhost
+  PDP_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PDS_ENGINE_PRIVATE_HOSTNAME: pd-pingdatasync
+  PDS_ENGINE_PRIVATE_PORT_HTTPS: '443'
+  PDS_ENGINE_PUBLIC_HOSTNAME: localhost
+  PDS_ENGINE_PUBLIC_PORT_HTTPS: '1443'
+  PF_ADMIN_PRIVATE_HOSTNAME: pd-pingfederate-admin
+  PF_ADMIN_PRIVATE_PORT_HTTPS: '9999'
+  PF_ADMIN_PUBLIC_HOSTNAME: localhost
+  PF_ADMIN_PUBLIC_PORT_HTTPS: '9999'
+  PF_ENGINE_PRIVATE_HOSTNAME: pd-pingfederate-engine
+  PF_ENGINE_PRIVATE_PORT_HTTPS: '9031'
+  PF_ENGINE_PUBLIC_HOSTNAME: localhost
+  PF_ENGINE_PUBLIC_PORT_HTTPS: '9031'
+  PING_IDENTITY_ACCEPT_EULA: 'YES'
+  RETRY_TIMEOUT_SECONDS: '900'
+  ROOT_USER_DN: cn=administrator
+  SECRETS_DIR: /run/ping-secrets
+  SERVER_PROFILE_URL: ''
+  TRUSTSTORE_FILE: /run/ping-secrets/truststore.p12
+  TRUSTSTORE_PIN_FILE: /run/ping-secrets/truststore.pin
+  USER_BASE_DN: dc=example,dc=com
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: pd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: global
+    helm.sh/chart: ping-devops-0.16.0
+  name: pd-global-env-vars
+---
+apiVersion: v1
+data:
+  BASE_ATTRIBUTE: dc
+  BASE_CLASS: domain
+  BASE_VALUE: example
+  K8S_STATEFUL_SET_NAME: pd-pingdirectoryproxy
+  K8S_STATEFUL_SET_SERVICE_NAME: pd-pingdirectoryproxy-cluster
+  KEYSTORE_FILE: /run/ping-secrets/keystore.p12
+  KEYSTORE_PIN_FILE: /run/ping-secrets/keystore.pin
+  LDAPS_PORT: '1636'
+  LICENSE_DIR: /run/ping-secrets
+  MAKELDIF_USERS: '0'
+  MAX_HEAP_SIZE: 1g
+  ORCHESTRATION_TYPE: KUBERNETES
+  PD_LICENSE_DIR: /run/ping-secrets
+  PING_IDENTITY_ACCEPT_EULA: 'YES'
+  PINGDIRECTORY_HOSTNAME: pd-pingdirectory-0.pd-pingdirectory-cluster
+  PINGDIRECTORY_LDAPS_PORT: '1636'
+  RETRY_TIMEOUT_SECONDS: '900'
+  ROOT_USER_DN: cn=administrator
+  SECRETS_DIR: /run/ping-secrets
+  SERVER_PROFILE_URL: ''
+  TRUSTSTORE_FILE: /run/ping-secrets/truststore.p12
+  TRUSTSTORE_PIN_FILE: /run/ping-secrets/truststore.pin
+  USER_BASE_DN: dc=example,dc=com
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/instance: pd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingdirectoryproxy
+    helm.sh/chart: ping-devops-0.16.0
+  name: pd-pingdirectoryproxy-env-vars
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: 'true'
+  labels:
+    app.kubernetes.io/instance: pd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingdirectoryproxy
+    helm.sh/chart: ping-devops-0.16.0
+  name: pd-pingdirectoryproxy-cluster
+spec:
+  clusterIP: None
+  ports:
+  - name: ldaps
+    port: 1636
+    protocol: TCP
+  publishNotReadyAddresses: true
+  selector:
+    clusterIdentifier: pd-pingdirectoryproxy
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: null
+  labels:
+    app.kubernetes.io/instance: pd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingdirectoryproxy
+    helm.sh/chart: ping-devops-0.16.0
+  name: pd-pingdirectoryproxy
+spec:
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 1443
+  - name: ldap
+    port: 389
+    protocol: TCP
+    targetPort: 1389
+  - name: ldaps
+    port: 636
+    protocol: TCP
+    targetPort: 1636
+  selector:
+    app.kubernetes.io/instance: pd
+    app.kubernetes.io/name: pingdirectoryproxy
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    app.kubernetes.io/instance: pd
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: pingdirectoryproxy
+    helm.sh/chart: ping-devops-0.16.0
+  name: pd-pingdirectoryproxy
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: pd
+      app.kubernetes.io/name: pingdirectoryproxy
+  serviceName: pd-pingdirectoryproxy-cluster
+  template:
+    metadata:
+      annotations:
+        checksum/config: 70401aad70bd11c174fdd762c99b31d7b9b9c61dccd9dfcb7ff4a85de3e2df2d
+      labels:
+        app.kubernetes.io/instance: pd
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: pingdirectoryproxy
+        clusterIdentifier: pd-pingdirectoryproxy
+        helm.sh/chart: ping-devops-0.16.0
+    spec:
+      affinity: {}
+      containers:
+      - args: null
+        env:
+        - name: ACTIVE_COLOUR
+          valueFrom:
+            configMapKeyRef:
+              key: active_colour
+              name: pd-routing
+        envFrom:
+        - configMapRef:
+            name: pd-global-env-vars
+            optional: true
+        - configMapRef:
+            name: pd-env-vars
+            optional: true
+        - configMapRef:
+            name: pd-pingdirectoryproxy-env-vars
+        - secretRef:
+            name: devops-secret
+            optional: true
+        - secretRef:
+            name: pd-pingdirectoryproxy-git-secret
+            optional: true
+        image: 447061058131.dkr.ecr.ap-southeast-2.amazonaws.com/pd-spot-dev/pingdirectoryproxy:dev-v3
+        imagePullPolicy: IfNotPresent
+        lifecycle: {}
+        livenessProbe:
+          exec:
+            command:
+            - /opt/liveness.sh
+          failureThreshold: 4
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: pingdirectoryproxy
+        ports:
+        - containerPort: 1443
+          name: https
+        - containerPort: 1389
+          name: ldap
+        - containerPort: 1636
+          name: ldaps
+        readinessProbe:
+          exec:
+            command:
+            - /opt/readiness.sh
+          failureThreshold: 4
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: 2
+            memory: 2Gi
+          requests:
+            cpu: 250m
+            memory: 1Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        startupProbe:
+          exec:
+            command:
+            - /opt/liveness.sh
+          failureThreshold: 90
+          periodSeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /runtime
+          name: runtime-zone
+        - mountPath: /run/ping-secrets
+          name: runtime-secret-files
+          readOnly: true
+      enableServiceLinks: true
+      initContainers:
+      - args:
+        - "#!/usr/bin/env sh\n# Runs only as an init container, before any directory\
+          \ process opens this PVC.\nset -eu\numask 077\nsource_dir=${SECRET_SOURCE:-/run/projected-secrets}\n\
+          destination=${SECRET_DEST:-/run/ping-secrets}\nconfig=${SERVER_CONFIG:-/opt/out/instance/config/config.ldif}\n\
+          mkdir -p \"$destination\"\nfor source in \"$source_dir\"/*; do\n    test\
+          \ -f \"$source\" || continue\n    cp -L \"$source\" \"$destination/$(basename\
+          \ \"$source\")\"\n    chmod 640 \"$destination/$(basename \"$source\")\"\
+          \ndone\ntest -s \"$destination/keystore.p12\"\ntest -s \"$destination/truststore.p12\"\
+          \nif test -f \"$config\"; then\n    # Unfold LDIF before matching paths,\
+          \ since Ping may wrap long attribute lines.\n    temporary=\"${config}.secret-path-repair.tmp\"\
+          \n    trap 'rm -f \"$temporary\"' EXIT HUP INT TERM\n    awk '\n    function\
+          \ emit() {\n        if (line ~ /^ds-cfg-(key|trust)-store-(file|pin-file):\
+          \ /) {\n            gsub(/\\/run\\/ping-secrets\\/\\.\\.[0-9][0-9][0-9][0-9]_[^\\\
+          /[:space:]]+\\//, \"/run/ping-secrets/\", line)\n        }\n        print\
+          \ line\n    }\n    /^ / { line = line substr($0, 2); next }\n    { if (NR\
+          \ > 1) emit(); line = $0 }\n    END { if (NR > 0) emit() }\n    ' \"$config\"\
+          \ > \"$temporary\"\n    # Only replace configuration when an expired projected\
+          \ path was present.\n    if grep -Eq '^ds-cfg-(key|trust)-store-(file|pin-file):\
+          \ /run/ping-secrets/\\.\\.' \"$temporary\"; then\n        echo 'Unsupported\
+          \ projected Secret path remains; refusing startup' >&2\n        exit 1\n\
+          \    fi\n    if ! cmp -s \"$config\" \"$temporary\"; then\n        cp -p\
+          \ \"$config\" \"${config}.before-secret-path-repair.$(date +%s)\"\n    \
+          \    chmod 600 \"$temporary\"\n        mv \"$temporary\" \"$config\"\n \
+          \       echo 'Normalized saved TLS paths; original configuration preserved\
+          \ on PVC'\n    fi\nfi\n"
+        command:
+        - sh
+        - -ec
+        image: pingidentity/pingtoolkit:2609
+        name: prepare-runtime
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsGroup: 0
+          runAsUser: 9031
+        volumeMounts:
+        - mountPath: /run/projected-secrets
+          name: runtime-secrets
+          readOnly: true
+        - mountPath: /run/ping-secrets
+          name: runtime-secret-files
+      - args:
+        - zone=$(kubectl get node "$NODE_NAME" -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}');
+          test -n "$zone"; printf "%s" "$zone" > /runtime/availability-zone
+        command:
+        - sh
+        - -ec
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        image: pingidentity/pingtoolkit:2609
+        name: read-availability-zone
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsGroup: 0
+          runAsUser: 9031
+        volumeMounts:
+        - mountPath: /runtime
+          name: runtime-zone
+      nodeSelector:
+        eks.amazonaws.com/capacityType: SPOT
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 0
+        runAsGroup: 0
+        runAsNonRoot: true
+        runAsUser: 9031
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: ping-runtime
+      shareProcessNamespace: false
+      terminationGracePeriodSeconds: 300
+      tolerations: []
+      topologySpreadConstraints:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: pd
+            app.kubernetes.io/name: pingdirectoryproxy
+        maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: pd
+            app.kubernetes.io/name: pingdirectoryproxy
+        maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+      volumes:
+      - emptyDir: {}
+        name: runtime-zone
+      - name: runtime-secrets
+        secret:
+          secretName: pd-runtime
+      - emptyDir:
+          medium: Memory
+        name: runtime-secret-files
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain

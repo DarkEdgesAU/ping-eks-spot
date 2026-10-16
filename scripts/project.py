@@ -156,6 +156,9 @@ def values(c, target, repositories=None):
                            'resources': {'requests': {'storage': c['directory_storage']}}}}}}}}
     else:
         p['envs']['MAX_HEAP_SIZE'] = '1g'
+        # Proxy instances are ephemeral and have no shared out-dir volume.
+        init = v['initContainers']['prepare-runtime']
+        init['volumeMounts'] = [mount for mount in init['volumeMounts'] if mount['name'] != 'out-dir']
         p['container']['env'] = [{'name': 'ACTIVE_COLOUR', 'valueFrom': {'configMapKeyRef': {'name': 'pd-routing', 'key': 'active_colour'}}}]
         p['workload'] = {'type': 'StatefulSet', 'statefulSet': {'persistentvolume': {'enabled': False}}}
     return v
@@ -180,6 +183,11 @@ def render(c, target, repos=None):
             names = [vol['name'] for vol in pod.get('volumes', [])]
             if len(names) != len(set(names)):
                 raise ValueError('Duplicate generated volume names')
+            available = set(names) | {claim['metadata']['name'] for claim in obj['spec'].get('volumeClaimTemplates', [])}
+            for container in pod.get('initContainers', []) + pod['containers']:
+                for mount in container.get('volumeMounts', []):
+                    if mount['name'] not in available:
+                        raise ValueError(f'{target}: container {container["name"]} mounts undefined volume {mount["name"]}')
             for con in pod['topologySpreadConstraints']:
                 if 'labelSelector' not in con:
                     raise ValueError('Chart failed to add spread selector')
@@ -243,14 +251,16 @@ def secrets(c):
     check_context(c)
     directory = ROOT / '.secrets'
     directory.mkdir(mode=0o700, exist_ok=True)
-    for name in ('root-user-password','admin-user-password','encryption-password','keystore.pin','truststore.pin'):
+    for name in ('root-user-password','admin-user-password','encryption-password','keystore.pin','truststore.pin',
+                 'demo-user-password', 'federate-ldap-password'):
         p = directory / name
         if not p.exists():
             p.write_bytes(base64.urlsafe_b64encode(os.urandom(32)) + b'\n')
             p.chmod(0o600)
     if not (directory / 'ca.crt').exists():
         run(['openssl','req','-x509','-newkey','rsa:3072','-nodes','-days','365',
-             '-subj','/CN=PingDirectory development CA','-keyout',directory/'ca.key','-out',directory/'ca.crt'])
+             '-subj','/CN=DarkEdges internal development CA','-keyout',directory/'ca.key','-out',directory/'ca.crt'])
+    if not (directory / 'keystore.p12').exists():
         san = ['DNS:localhost', 'DNS:pd-pingdirectoryproxy.identity-proxy.svc.cluster.local']
         san += [f'DNS:*.pd-pingdirectory-cluster.identity-{col}.svc.cluster.local' for col in COLOURS]
         san += ['DNS:*.pd-pingdirectoryproxy-cluster.identity-proxy.svc.cluster.local']
@@ -267,7 +277,8 @@ def secrets(c):
     for store in ('keystore', 'truststore'):
         run(['keytool', '-list', '-keystore', directory/f'{store}.p12', '-storetype', 'PKCS12',
              '-storepass:file', directory/f'{store}.pin'], capture=True)
-    required = ['root-user-password','admin-user-password','encryption-password','keystore.pin','truststore.pin','keystore.p12','truststore.p12']
+    required = ['root-user-password','admin-user-password','encryption-password','keystore.pin','truststore.pin','keystore.p12','truststore.p12',
+                'ca.crt','demo-user-password','federate-ldap-password']
     for p in directory.iterdir():
         p.chmod(0o600)
     data = {name:base64.b64encode((directory/name).read_bytes()).decode() for name in required}
@@ -298,7 +309,7 @@ def main():
     BUILD.mkdir(exist_ok=True)
     if a.command == 'validate':
         shell = profile_shell()
-        for product in ('pingdirectory','pingdirectoryproxy'):
+        for product in ('pingdirectory','pingdirectoryproxy','pingfederate','pingaccess'):
             for p in (ROOT/'profiles'/product/'hooks').glob('*.sh*'):
                 run([shell,'-n',p.as_posix()])
         for target in (*COLOURS,'proxy'):
@@ -319,10 +330,14 @@ def main():
         password = run(['aws','ecr','get-login-password','--region',out['region']], capture=True)
         run(['docker','login','--username','AWS','--password-stdin',registry], data=password)
         for product, repo in out['repositories'].items():
+            if product in ('pingfederate','pingaccess'):
+                continue  # PF has independently versioned blue/green image tags.
             run(['docker','build','--platform','linux/amd64','--build-arg',f'BASE_TAG={c["base_image_tag"]}',
                  '-f',f'images/{product}.Dockerfile','-t',f'{repo}:{c["image_tag"]}','.'])
             run(['docker','push',f'{repo}:{c["image_tag"]}'])
     elif a.command == 'deploy':
+        if c.get('deployment_manager') == 'argocd':
+            raise ValueError('Argo CD owns workload deployment. Run make gitops-export, commit, then sync the candidate application.')
         if not c['accept_eula']:
             raise ValueError('Review the Ping EULA and set accept_eula=true to run these images.')
         out = check_context(c)

@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+set +x
+for name in demo-user-password federate-ldap-password; do
+    test -f "/run/ping-secrets/$name" || continue
+    case "$name" in
+      demo-user-password) variable=DEMO_USER_PASSWORD;;
+      federate-ldap-password) variable=FEDERATE_LDAP_PASSWORD;;
+    esac
+    printf '\n%s=%s\n' "$variable" "$(cat "/run/ping-secrets/$name")" >> "$CONTAINER_ENV"
+done

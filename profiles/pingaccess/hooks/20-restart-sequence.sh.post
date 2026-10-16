@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+set -eu
+# Preserve console/API-managed configuration on retained admins.
+rm -f "$SERVER_ROOT_DIR/data/data.json"

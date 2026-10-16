@@ -1,0 +1,5 @@
+# Minimal profile: stock PingAccess hooks initialize the admin and join engines.
+# No embedded passwords, demo imports, licenses or private keys.
+export PA_LOG_LEVEL=${PA_LOG_LEVEL:-INFO}
+export VERBOSE=false
+export PING_DEBUG=false
