@@ -1,0 +1,18 @@
+cluster.name: ping-logs-poc
+node.name: opensearch
+network.host: 0.0.0.0
+discovery.type: single-node
+# Small POC: avoid a privileged vm.max_map_count init container.
+node.store.allow_mmap: false
+plugins.security.ssl.transport.pemcert_filepath: tls/opensearch.crt
+plugins.security.ssl.transport.pemkey_filepath: tls/opensearch.key
+plugins.security.ssl.transport.pemtrustedcas_filepath: tls/ca.crt
+plugins.security.ssl.transport.enforce_hostname_verification: true
+plugins.security.ssl.http.enabled: true
+plugins.security.ssl.http.pemcert_filepath: tls/opensearch.crt
+plugins.security.ssl.http.pemkey_filepath: tls/opensearch.key
+plugins.security.ssl.http.pemtrustedcas_filepath: tls/ca.crt
+plugins.security.nodes_dn: [CN=opensearch]
+plugins.security.authcz.admin_dn: [CN=opensearch-admin]
+plugins.security.allow_default_init_securityindex: true
+plugins.security.restapi.roles_enabled: [all_access, security_rest_api_access]

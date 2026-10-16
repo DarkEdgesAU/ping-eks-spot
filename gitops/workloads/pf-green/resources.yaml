@@ -40,8 +40,8 @@ data:
   PD_CONSOLE_PUBLIC_PORT_HTTPS: '8443'
   PD_DELEGATOR_PRIVATE_HOSTNAME: pf-green-pingdelegator
   PD_DELEGATOR_PRIVATE_PORT_HTTPS: '6443'
-  PD_DELEGATOR_PUBLIC_HOSTNAME: localhost
-  PD_DELEGATOR_PUBLIC_PORT_HTTPS: '6443'
+  PD_DELEGATOR_PUBLIC_HOSTNAME: ext-pingdelegator.eks.darkedges.com
+  PD_DELEGATOR_PUBLIC_PORT_HTTPS: '443'
   PD_ENGINE_PRIVATE_HOSTNAME: pd-pingdirectoryproxy.identity-proxy.svc.cluster.local
   PD_ENGINE_PRIVATE_PORT_HTTPS: '443'
   PD_ENGINE_PRIVATE_PORT_LDAP: '636'
@@ -91,6 +91,8 @@ data:
   DNS_QUERY_LOCATION: pf-green-pingfederate-cluster.identity-federate-green.svc.cluster.local
   DNS_RECORD_TYPE: A
   OPERATIONAL_MODE: CLUSTERED_CONSOLE
+  PD_DELEGATOR_PUBLIC_HOSTNAME: ext-pingdelegator.eks.darkedges.com
+  PD_DELEGATOR_PUBLIC_PORT_HTTPS: '443'
   PD_ENGINE_PRIVATE_HOSTNAME: pd-pingdirectoryproxy.identity-proxy.svc.cluster.local
   PD_ENGINE_PRIVATE_PORT_LDAP: '636'
   PF_ADMIN_PUBLIC_BASEURL: https://pingfederate-green-admin.eks.darkedges.com
@@ -122,6 +124,8 @@ data:
   DNS_QUERY_LOCATION: pf-green-pingfederate-cluster.identity-federate-green.svc.cluster.local
   DNS_RECORD_TYPE: A
   OPERATIONAL_MODE: CLUSTERED_ENGINE
+  PD_DELEGATOR_PUBLIC_HOSTNAME: ext-pingdelegator.eks.darkedges.com
+  PD_DELEGATOR_PUBLIC_PORT_HTTPS: '443'
   PD_ENGINE_PRIVATE_HOSTNAME: pd-pingdirectoryproxy.identity-proxy.svc.cluster.local
   PD_ENGINE_PRIVATE_PORT_LDAP: '636'
   PF_ADMIN_PORT: '9999'
@@ -222,6 +226,7 @@ metadata:
     app.kubernetes.io/name: pingfederate-engine
     helm.sh/chart: ping-devops-0.16.0
   name: pf-green-pingfederate-engine
+  namespace: identity-federate-green
 spec:
   replicas: 3
   selector:
@@ -236,7 +241,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 05aba2ec444af1c80968ea490128e3d65488048ff26d4d8f8c5b853a0c963463
+        checksum/config: 0053e40db9b6265bd63d390072255dc74f6467971bdbba47db9e22241e6e64df
       labels:
         app.kubernetes.io/instance: pf-green
         app.kubernetes.io/managed-by: Helm
@@ -318,6 +323,58 @@ spec:
           name: pf-bootstrap-hooks
           readOnly: true
           subPath: 03-build-run-plan.sh.post
+        - name: logging-out
+          mountPath: /opt/out
+      - name: log-shipper
+        image: fluent/fluent-bit:4.2.3
+        args:
+        - -c
+        - /fluent-bit/etc/poc/sidecar.conf
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            memory: 192Mi
+        securityContext:
+          runAsUser: 9031
+          runAsGroup: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: PRODUCT
+          value: pingfederate-engine
+        - name: LOG_PATHS
+          value: /logs/instance/log/*.log,/logs/instance/log/*.json
+        - name: COLOUR
+          value: green
+        - name: LOG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: log-shipper
+              key: password
+        volumeMounts:
+        - name: logging-out
+          mountPath: /logs
+          readOnly: true
+        - name: logging-config
+          mountPath: /fluent-bit/etc/poc
+          readOnly: true
+        - name: logging-credentials
+          mountPath: /credentials
+          readOnly: true
+        - name: logging-buffer
+          mountPath: /buffers
       enableServiceLinks: true
       initContainers:
       - command:
@@ -470,6 +527,17 @@ spec:
           defaultMode: 493
           name: pf-green-bootstrap-hooks
         name: pf-bootstrap-hooks
+      - name: logging-out
+        emptyDir: {}
+      - name: logging-config
+        configMap:
+          name: ping-log-collector
+      - name: logging-credentials
+        secret:
+          secretName: log-shipper
+      - name: logging-buffer
+        emptyDir:
+          sizeLimit: 256Mi
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -482,6 +550,7 @@ metadata:
     app.kubernetes.io/name: pingfederate-admin
     helm.sh/chart: ping-devops-0.16.0
   name: pf-green-pingfederate-admin
+  namespace: identity-federate-green
 spec:
   podManagementPolicy: OrderedReady
   replicas: 1
@@ -493,7 +562,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 1d1363dbdd41e4b0a525d88e10fc0b85ac2096e8e110a936121f5135c3a92a0e
+        checksum/config: 6bf1d0de0a0d28250c56487d4a12de6e5c9bbf1ba8806cc02ec18b15ec509990
       labels:
         app.kubernetes.io/instance: pf-green
         app.kubernetes.io/managed-by: Helm
@@ -577,6 +646,56 @@ spec:
           subPath: 03-build-run-plan.sh.post
         - mountPath: /opt/out
           name: out-dir
+      - name: log-shipper
+        image: fluent/fluent-bit:4.2.3
+        args:
+        - -c
+        - /fluent-bit/etc/poc/sidecar.conf
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            memory: 192Mi
+        securityContext:
+          runAsUser: 9031
+          runAsGroup: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: PRODUCT
+          value: pingfederate-admin
+        - name: LOG_PATHS
+          value: /logs/instance/log/*.log,/logs/instance/log/*.json
+        - name: COLOUR
+          value: green
+        - name: LOG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: log-shipper
+              key: password
+        volumeMounts:
+        - name: out-dir
+          mountPath: /logs
+          readOnly: true
+        - name: logging-config
+          mountPath: /fluent-bit/etc/poc
+          readOnly: true
+        - name: logging-credentials
+          mountPath: /credentials
+          readOnly: true
+        - name: logging-buffer
+          mountPath: /buffers
       enableServiceLinks: true
       initContainers:
       - args:
@@ -692,6 +811,15 @@ spec:
       - name: out-dir
         persistentVolumeClaim:
           claimName: out-dir
+      - name: logging-config
+        configMap:
+          name: ping-log-collector
+      - name: logging-credentials
+        secret:
+          secretName: log-shipper
+      - name: logging-buffer
+        emptyDir:
+          sizeLimit: 256Mi
   updateStrategy:
     rollingUpdate:
       partition: 0
@@ -738,4 +866,30 @@ data:
     \nelse\n    cp /run/ping-secrets/pf.jwk \"$STAGING_DIR/instance/server/default/data/pf.jwk\"\
     \n    chmod 600 \"$STAGING_DIR/instance/server/default/data/pf.jwk\"\nfi\nprintf\
     \ '\\nPF_ENGINE_BASE_URL=%s\\nPD_DELEGATOR_URL=%s\\n' \\\n  \"${PF_ENGINE_PUBLIC_HOSTNAME}:443\"\
-    \ \"${PF_ENGINE_PUBLIC_HOSTNAME}:443\" >> \"$CONTAINER_ENV\"\n"
+    \ \"${PD_DELEGATOR_PUBLIC_HOSTNAME:-localhost}\" >> \"$CONTAINER_ENV\"\n"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ping-log-collector
+  namespace: identity-federate-green
+data:
+  sidecar.conf: "[SERVICE]\n    Flush 2\n    Log_Level info\n    Parsers_File /fluent-bit/etc/poc/parsers.conf\n\
+    \    storage.path /buffers/chunks\n    HTTP_Server On\n    HTTP_Listen 0.0.0.0\n\
+    \    HTTP_Port 2020\n\n[INPUT]\n    Name tail\n    Path ${LOG_PATHS}\n    Exclude_Path\
+    \ *.gz,*.zip,*.lock,*.lck\n    Tag ping.files\n    Path_Key source_file\n    DB\
+    \ /buffers/tail.db\n    Read_from_Head On\n    Refresh_Interval 2\n    Rotate_Wait\
+    \ 10\n    Buffer_Max_Size 1M\n    Skip_Long_Lines On\n    storage.type filesystem\n\
+    \n[FILTER]\n    Name modify\n    Match *\n    Add namespace ${POD_NAMESPACE}\n\
+    \    Add pod ${POD_NAME}\n    Add product ${PRODUCT}\n    Add colour ${COLOUR}\n\
+    \    Add stream product_file\n\n[OUTPUT]\n    Name opensearch\n    Match *\n \
+    \   Host opensearch.logging.svc.cluster.local\n    Port 9200\n    HTTP_User logshipper\n\
+    \    HTTP_Passwd ${LOG_PASSWORD}\n    tls On\n    tls.verify On\n    tls.verify_hostname\
+    \ On\n    tls.ca_file /credentials/ca.crt\n    Logstash_Format On\n    Logstash_Prefix\
+    \ logs-ping\n    Suppress_Type_Name On\n    Generate_ID On\n    Retry_Limit False\n\
+    \    storage.total_limit_size 128M\n"
+  parsers.conf: "[PARSER]\n    Name cri\n    Format regex\n    Regex ^(?<time>[^ ]+)\
+    \ (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$\n    Time_Key time\n \
+    \   Time_Format %Y-%m-%dT%H:%M:%S.%L%z\n\n[PARSER]\n    Name kube_path\n    Format\
+    \ regex\n    Regex ^/var/log/containers/(?<pod>[^_]+)_(?<namespace>[^_]+)_(?<container>.+)-(?<container_id>[a-f0-9]+)\\\
+    .log$\n"

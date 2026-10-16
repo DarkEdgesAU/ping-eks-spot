@@ -1,0 +1,536 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metrics-config
+  namespace: monitoring
+data:
+  prometheus.yml: "alerting:\n  alertmanagers:\n  - static_configs:\n    - targets:\n\
+    \      - alertmanager:9093\nglobal:\n  evaluation_interval: 15s\n  scrape_interval:\
+    \ 15s\nrule_files:\n- /settings/alerts.yml\nscrape_configs:\n- job_name: prometheus\n\
+    \  static_configs:\n  - targets:\n    - localhost:9090\n- job_name: ping-pods\n\
+    \  kubernetes_sd_configs:\n  - namespaces:\n      names:\n      - identity-blue\n\
+    \      - identity-green\n      - identity-proxy\n      - identity-federate-blue\n\
+    \      - identity-federate-green\n      - identity-access-blue\n      - identity-access-green\n\
+    \    role: pod\n  relabel_configs:\n  - action: keep\n    regex: ping-metrics\n\
+    \    source_labels:\n    - __meta_kubernetes_pod_container_port_name\n  - action:\
+    \ keep\n    regex: Running\n    source_labels:\n    - __meta_kubernetes_pod_phase\n\
+    \  - source_labels:\n    - __meta_kubernetes_namespace\n    target_label: namespace\n\
+    \  - source_labels:\n    - __meta_kubernetes_pod_name\n    target_label: pod\n\
+    \  scheme: https\n  tls_config:\n    ca_file: /tls/ca.crt\n    server_name: ping-metrics\n"
+  alerts.yml: "groups:\n- name: ping-poc\n  rules:\n  - alert: PingExporterDown\n\
+    \    annotations:\n      summary: Ping metrics exporter is unreachable\n    expr:\
+    \ up{job=\"ping-pods\"} == 0\n    for: 2m\n    labels:\n      severity: warning\n\
+    \  - alert: PingHealthFailed\n    annotations:\n      summary: Ping listener health\
+    \ check failed\n    expr: http_response_result_code{job=\"ping-pods\"} != 0 or\
+    \ http_response_http_response_code{job=\"ping-pods\"}\n      >= 400\n    for:\
+    \ 2m\n    labels:\n      severity: warning\n  - alert: PingHealthSlow\n    annotations:\n\
+    \      summary: Ping listener health check exceeds one second\n    expr: http_response_response_time{job=\"\
+    ping-pods\"} > 1\n    for: 2m\n    labels:\n      severity: warning\n  - alert:\
+    \ PingTargetsMissing\n    annotations:\n      summary: No Ping metrics targets\
+    \ discovered\n    expr: absent(up{job=\"ping-pods\"})\n    for: 2m\n    labels:\n\
+    \      severity: warning\n  - alert: PingTargetCountLow\n    annotations:\n  \
+    \    summary: Expected 25 Ping pods with metrics exporters\n    expr: count(up{job=\"\
+    ping-pods\"}) < 25\n    for: 2m\n    labels:\n      severity: warning\n"
+  alertmanager.yml: "receivers:\n- name: local-only\nroute:\n  group_by:\n  - alertname\n\
+    \  - namespace\n  receiver: local-only\n"
+  datasources.yml: "apiVersion: 1\ndatasources:\n- access: proxy\n  editable: false\n\
+    \  isDefault: true\n  name: Prometheus\n  type: prometheus\n  uid: prometheus\n\
+    \  url: http://prometheus:9090\n"
+  dashboards.yml: "apiVersion: 1\nproviders:\n- name: ping\n  options:\n    path:\
+    \ /dashboards\n"
+  ping.json: '{"uid": "ping-poc", "title": "Ping platform POC", "schemaVersion": 39,
+    "version": 1, "refresh": "15s", "time": {"from": "now-1h", "to": "now"}, "panels":
+    [{"id": 1, "title": "Exporters up by namespace", "type": "timeseries", "datasource":
+    {"type": "prometheus", "uid": "prometheus"}, "gridPos": {"x": 0, "y": 0, "w":
+    12, "h": 8}, "targets": [{"expr": "sum by(namespace) (up{job=\"ping-pods\"})",
+    "legendFormat": "{{namespace}} {{pod}}"}]}, {"id": 2, "title": "Health response
+    time", "type": "timeseries", "datasource": {"type": "prometheus", "uid": "prometheus"},
+    "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}, "targets": [{"expr": "http_response_response_time{job=\"ping-pods\"}",
+    "legendFormat": "{{namespace}} {{pod}}"}]}, {"id": 3, "title": "Health HTTP status",
+    "type": "timeseries", "datasource": {"type": "prometheus", "uid": "prometheus"},
+    "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}, "targets": [{"expr": "http_response_http_response_code{job=\"ping-pods\"}",
+    "legendFormat": "{{namespace}} {{pod}}"}]}, {"id": 4, "title": "Firing alerts",
+    "type": "timeseries", "datasource": {"type": "prometheus", "uid": "prometheus"},
+    "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}, "targets": [{"expr": "ALERTS{alertstate=\"firing\"}",
+    "legendFormat": "{{namespace}} {{pod}}"}]}]}'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-blue
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-blue
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ping-metrics-discovery
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-green
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-green
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ping-metrics-discovery
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-proxy
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-proxy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ping-metrics-discovery
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-federate-blue
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-federate-blue
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ping-metrics-discovery
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-federate-green
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-federate-green
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ping-metrics-discovery
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-access-blue
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-access-blue
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ping-metrics-discovery
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-access-green
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ping-metrics-discovery
+  namespace: identity-access-green
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ping-metrics-discovery
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: prometheus
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      automountServiceAccountToken: true
+      securityContext:
+        runAsUser: 65534
+        runAsGroup: 0
+        fsGroup: 0
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v3.7.2
+        args:
+        - --config.file=/settings/prometheus.yml
+        - --storage.tsdb.path=/data
+        - --storage.tsdb.retention.time=1d
+        ports:
+        - containerPort: 9090
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 1Gi
+        volumeMounts:
+        - name: settings
+          mountPath: /settings
+        - name: data
+          mountPath: /data
+        - name: tls
+          mountPath: /tls
+          readOnly: true
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+      volumes:
+      - name: settings
+        configMap:
+          name: metrics-config
+      - name: tls
+        secret:
+          secretName: metrics-tls
+      serviceAccountName: prometheus
+  serviceName: prometheus
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: pingdirectory-ebs
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - name: https
+    port: 9090
+    targetPort: 9090
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 65534
+        runAsGroup: 0
+        fsGroup: 0
+      containers:
+      - name: alertmanager
+        image: prom/alertmanager:v0.28.1
+        args:
+        - --config.file=/settings/alertmanager.yml
+        - --storage.path=/data
+        - --cluster.listen-address=
+        ports:
+        - containerPort: 9093
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 1Gi
+        volumeMounts:
+        - name: settings
+          mountPath: /settings
+        - name: data
+          mountPath: /data
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9093
+      volumes:
+      - name: settings
+        configMap:
+          name: metrics-config
+  serviceName: alertmanager
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: pingdirectory-ebs
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+spec:
+  selector:
+    app: alertmanager
+  ports:
+  - name: https
+    port: 9093
+    targetPort: 9093
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: grafana
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 472
+        runAsGroup: 0
+        fsGroup: 0
+      containers:
+      - name: grafana
+        image: grafana/grafana:12.2.0
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SERVER_PROTOCOL
+          value: https
+        - name: GF_SERVER_CERT_FILE
+          value: /tls/tls.crt
+        - name: GF_SERVER_CERT_KEY
+          value: /tls/tls.key
+        - name: GF_SERVER_ROOT_URL
+          value: https://monitoring.eks.darkedges.com
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: 'false'
+        - name: GF_USERS_ALLOW_SIGN_UP
+          value: 'false'
+        - name: GF_SECURITY_ADMIN_PASSWORD__FILE
+          value: /auth/admin-password
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 768Mi
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/grafana
+        - name: tls
+          mountPath: /tls
+          readOnly: true
+        - name: auth
+          mountPath: /auth
+          readOnly: true
+        - name: settings
+          mountPath: /etc/grafana/provisioning/datasources/ping.yml
+          subPath: datasources.yml
+        - name: settings
+          mountPath: /etc/grafana/provisioning/dashboards/ping.yml
+          subPath: dashboards.yml
+        - name: settings
+          mountPath: /dashboards/ping.json
+          subPath: ping.json
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+            scheme: HTTPS
+      volumes:
+      - name: settings
+        configMap:
+          name: metrics-config
+      - name: tls
+        secret:
+          secretName: metrics-tls
+      - name: auth
+        secret:
+          secretName: grafana-auth
+  serviceName: grafana
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: pingdirectory-ebs
+      resources:
+        requests:
+          storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  selector:
+    app: grafana
+  ports:
+  - name: https
+    port: 3000
+    targetPort: 3000

@@ -1,0 +1,8 @@
+# StatsD stays within the pod network namespace, not a public UDP service.
+dsconfig create-monitoring-endpoint \
+  --endpoint-name PlatformStatsD \
+  --type statsd \
+  --set enabled:true \
+  --set hostname:127.0.0.1 \
+  --set server-port:8125 \
+  --set connection-type:unencrypted-udp

@@ -35,4 +35,4 @@ else
     chmod 600 "$STAGING_DIR/instance/server/default/data/pf.jwk"
 fi
 printf '\nPF_ENGINE_BASE_URL=%s\nPD_DELEGATOR_URL=%s\n' \
-  "${PF_ENGINE_PUBLIC_HOSTNAME}:443" "${PF_ENGINE_PUBLIC_HOSTNAME}:443" >> "$CONTAINER_ENV"
+  "${PF_ENGINE_PUBLIC_HOSTNAME}:443" "${PD_DELEGATOR_PUBLIC_HOSTNAME:-localhost}" >> "$CONTAINER_ENV"

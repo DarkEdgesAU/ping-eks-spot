@@ -1,0 +1,140 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pingcentral-profile
+  namespace: identity-central
+data:
+  profile-0: 'spring.datasource.url=jdbc:h2:${pingcentral.home}/h2-data/pingcentral;TRACE_LEVEL_SYSTEM_OUT=0;TRACE_LEVEL_FILE=0;DB_CLOSE_ON_EXIT=FALSE;ALLOW_LITERALS=ALL
+
+    spring.datasource.username=PingCentral
+
+    server.port=9022
+
+    management.endpoints.enabled-by-default=false
+
+    management.endpoint.health.enabled=true
+
+    management.endpoint.info.enabled=true
+
+    pingcentral.expressions.enabled=false
+
+    '
+  profile-1: "#!/usr/bin/env sh\nset -eu\n# Run after product bits and profile are\
+    \ copied, before license verification.\numask 077\nif test -s /run/platform/pingcentral.lic;\
+    \ then\n    cp /run/platform/pingcentral.lic \"${SERVER_ROOT_DIR}/conf/pingcentral.lic\"\
+    \nfi\n# Preserve H2, host keys and all application state on /opt/out.\ncat >>\
+    \ \"${SERVER_ROOT_DIR}/conf/application.properties\" <<EOF\nspring.datasource.password=$(cat\
+    \ /run/platform/db-password)\n# PingCentral stores its server TLS key pair in\
+    \ its database. Import the prepared\n# PKCS12 through Security > Server TLS Key\
+    \ Pair, then restart the application.\npingcentral.proxied=true\nserver.forward-headers-strategy=framework\n\
+    server.ssl.trust-any=false\nserver.ssl.https.verify-hostname=true\nEOF\n"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pingcentral
+  namespace: identity-central
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: pingcentral
+  template:
+    metadata:
+      labels:
+        app: pingcentral
+      annotations:
+        checksum/profile: 04889a15ccfb52e4507dcc63ad21f0c04bb42e32e1559140f1dff1ee3c359fa6
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 9031
+        runAsGroup: 0
+        fsGroup: 0
+      containers:
+      - name: pingcentral
+        image: pingidentity/pingcentral:2609@sha256:ccaf56d2b985c5e073515be2e2993cbf43ef69104ca1ea5ea7a35b0ef5ceba90
+        env:
+        - name: PING_IDENTITY_ACCEPT_EULA
+          value: 'YES'
+        - name: VERBOSE
+          value: 'false'
+        - name: PING_DEBUG
+          value: 'false'
+        - name: PING_CENTRAL_BLIND_TRUST
+          value: 'false'
+        - name: PING_CENTRAL_VERIFY_HOSTNAME
+          value: 'true'
+        ports:
+        - containerPort: 9022
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            memory: 2Gi
+        volumeMounts:
+        - name: profile
+          mountPath: /opt/in
+          readOnly: true
+        - name: runtime
+          mountPath: /run/platform
+          readOnly: true
+        - name: data
+          mountPath: /opt/out
+        startupProbe:
+          tcpSocket:
+            port: 9022
+          periodSeconds: 10
+          failureThreshold: 60
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 9022
+            scheme: HTTPS
+        envFrom:
+        - secretRef:
+            name: pingcentral-devops
+            optional: true
+      volumes:
+      - name: profile
+        configMap:
+          name: pingcentral-profile
+          defaultMode: 493
+          items:
+          - key: profile-0
+            path: instance/conf/application.properties
+          - key: profile-1
+            path: hooks/07-apply-server-profile.sh.post
+      - name: runtime
+        secret:
+          secretName: pingcentral-runtime
+  serviceName: pingcentral
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: pingdirectory-ebs
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pingcentral
+  namespace: identity-central
+spec:
+  selector:
+    app: pingcentral
+  ports:
+  - name: https
+    port: 9022
+    targetPort: 9022

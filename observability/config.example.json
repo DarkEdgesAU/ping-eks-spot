@@ -1,0 +1,9 @@
+{
+  "enabled": false,
+  "namespace": "logging",
+  "hostname": "logs.eks.darkedges.com",
+  "opensearch_image": "opensearchproject/opensearch:3.6.0",
+  "dashboards_image": "opensearchproject/opensearch-dashboards:3.6.0",
+  "collector_image": "fluent/fluent-bit:4.2.3",
+  "storage": "20Gi"
+}

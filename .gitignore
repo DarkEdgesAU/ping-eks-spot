@@ -7,6 +7,9 @@
 config.json
 federate.json
 access.json
+observability.json
+platform-services.json
+/docs/openapi.json
 .env
 .env.*
 !.env.example

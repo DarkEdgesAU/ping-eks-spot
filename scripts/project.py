@@ -82,12 +82,21 @@ def routing_colour():
     return value
 
 def common_values(c):
+    import platform_services
+    import federate
+    import access
+    platform = platform_services.config()
     base_attribute, base_value = c['base_dn'].split(',', 1)[0].split('=', 1)
     envs = {
         'BASE_ATTRIBUTE': base_attribute, 'BASE_VALUE': base_value,
         'BASE_CLASS': 'domain' if base_attribute == 'dc' else 'organization',
         'PING_IDENTITY_ACCEPT_EULA': 'YES' if c['accept_eula'] else 'NO',
         'USER_BASE_DN': c['base_dn'], 'MAX_HEAP_SIZE': '4g',
+        'PD_DELEGATOR_PUBLIC_HOSTNAME': platform['delegator_hostname'],
+        'PD_DELEGATOR_PUBLIC_PORT_HTTPS': '443',
+        'PF_ENGINE_PUBLIC_HOSTNAME': federate.config()['engine_hostname'],
+        'PF_ENGINE_PUBLIC_PORT_HTTPS': '443',
+        'PA_ENGINE_PUBLIC_HOSTNAME': access.config()['engine_hostname'],
         'ROOT_USER_DN': 'cn=administrator', 'MAKELDIF_USERS': '0',
         'RETRY_TIMEOUT_SECONDS': '900', 'SERVER_PROFILE_URL': '',
         'SECRETS_DIR': '/run/ping-secrets', 'PD_LICENSE_DIR': '/run/ping-secrets', 'LICENSE_DIR': '/run/ping-secrets',
@@ -176,6 +185,10 @@ def render(c, target, repos=None):
     ns = f'identity-{target}'
     result = run(['helm', 'template', 'pd', chart(), '-n', ns, '--kube-version', '1.35.0', '-f', f], capture=True)
     manifests = list(yaml.safe_load_all(result))
+    import observability
+    manifests = observability.attach(manifests, namespace=ns)
+    import platform_services
+    manifests = platform_services.attach(manifests, namespace=ns)
     # Full parser also rejects chart/values indentation bugs before any mutation.
     for obj in manifests:
         if obj and obj.get('kind') == 'StatefulSet':
@@ -191,7 +204,7 @@ def render(c, target, repos=None):
             for con in pod['topologySpreadConstraints']:
                 if 'labelSelector' not in con:
                     raise ValueError('Chart failed to add spread selector')
-    (BUILD / f'{target}.manifests.yaml').write_text(result)
+    (BUILD / f'{target}.manifests.yaml').write_text(yaml.safe_dump_all(manifests, sort_keys=False))
     return f
 
 def validate_evidence(e, c, target, now=None):
@@ -262,6 +275,7 @@ def secrets(c):
              '-subj','/CN=DarkEdges internal development CA','-keyout',directory/'ca.key','-out',directory/'ca.crt'])
     if not (directory / 'keystore.p12').exists():
         san = ['DNS:localhost', 'DNS:pd-pingdirectoryproxy.identity-proxy.svc.cluster.local']
+        san += [f'DNS:pd-pingdirectory.identity-{col}.svc.cluster.local' for col in COLOURS]
         san += [f'DNS:*.pd-pingdirectory-cluster.identity-{col}.svc.cluster.local' for col in COLOURS]
         san += ['DNS:*.pd-pingdirectoryproxy-cluster.identity-proxy.svc.cluster.local']
         (directory/'extensions.cnf').write_text('subjectAltName='+','.join(san)+'\nextendedKeyUsage=serverAuth,clientAuth\nbasicConstraints=CA:FALSE\n')
@@ -282,6 +296,12 @@ def secrets(c):
     for p in directory.iterdir():
         p.chmod(0o600)
     data = {name:base64.b64encode((directory/name).read_bytes()).decode() for name in required}
+    import oauth_client_secrets
+    for name in oauth_client_secrets.runtime_files():
+        path = oauth_client_secrets.PRIVATE/name
+        if not path.is_file():
+            raise ValueError('Run make oauth-client-secrets before installing Directory runtime secrets')
+        data[name] = base64.b64encode(path.read_bytes()).decode()
     for name in ('PingDirectory.lic','PingDirectoryProxy.lic'):
         if (directory/name).exists(): data[name] = base64.b64encode((directory/name).read_bytes()).decode()
     if not all(name in data for name in ('PingDirectory.lic','PingDirectoryProxy.lic')):

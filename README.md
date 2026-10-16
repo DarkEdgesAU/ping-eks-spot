@@ -1,5 +1,13 @@
 # PingDirectory EKS Spot development project
 
+Optional Prometheus/Grafana, Delegated Admin and PingCentral preparation and the
+ordered startup commands are in [docs/PLATFORM-SERVICES.md](docs/PLATFORM-SERVICES.md).
+Start with `make platform-render`; no AWS deployment is performed by rendering.
+
+The minimal OpenSearch log-shipping POC is documented in
+[docs/OPENSEARCH.md](docs/OPENSEARCH.md). Run `make logging-local-test` to prove
+file and container-log collection locally without rebuilding AWS infrastructure.
+
 PingAccess blue/green namespaces, profiles, Argo CD applications and public ALB
 ingress are described in [docs/PINGACCESS.md](docs/PINGACCESS.md). Start with
 `access.example.json` and `make pa-render`; runtime secrets, image publication,
@@ -88,9 +96,9 @@ Set your IAM role/user ARN and workstation egress CIDR, and set
 Defaults use **ap-southeast-2** and three AZs. Review the Ping EULA before
 setting `config.json.accept_eula=true`.
 
-Edit the tracked, non-secret `gitops/config.json`: confirm the ECR prefix,
-repository URL, and revision containing your deployment files. It currently
-targets `feature/pingfederate`; change it deliberately when merging to `main`.
+Copy `gitops/config.example.json` to ignored `gitops/config.json`: confirm the
+ECR prefix, repository URL, revision, origin certificate and Cloudflare ranges.
+The example targets `main`; merge deployment changes before syncing that revision.
 Set immutable image tags in `config.json` and `federate.json` before building.
 
 ```bash

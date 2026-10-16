@@ -79,6 +79,10 @@ def render(c,colour,repository=None):
         if doc['kind']=='Secret': raise ValueError('PA rendering must be secret-free')
         if doc['kind']=='StatefulSet':
             doc['spec']['persistentVolumeClaimRetentionPolicy']={'whenDeleted':'Retain','whenScaled':'Retain'}
+    import observability
+    docs=observability.attach(docs)
+    import platform_services
+    docs=platform_services.attach(docs)
     (project.BUILD/f'pa-{colour}.manifests.yaml').write_text(yaml.safe_dump_all(docs,sort_keys=False))
     return path
 

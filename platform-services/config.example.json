@@ -1,0 +1,19 @@
+{
+  "metrics_enabled": false,
+  "monitoring_hostname": "monitoring.eks.darkedges.com",
+  "delegator_hostname": "ext-pingdelegator.eks.darkedges.com",
+  "central_hostname": "pingcentral-admin.eks.darkedges.com",
+  "delegator_enabled": false,
+  "central_enabled": false,
+  "delegator_integration_verified": false,
+  "central_password_changed": false,
+  "central_tls_verified": false,
+  "directory_colour": "blue",
+  "pf_authority": "https://access.eks.darkedges.com/identity",
+  "central_image": "pingidentity/pingcentral:2609@sha256:ccaf56d2b985c5e073515be2e2993cbf43ef69104ca1ea5ea7a35b0ef5ceba90",
+  "delegator_image": "pingidentity/pingdelegator:2609@sha256:dde501436b268b188d5373ae11bbe805f5d66afb998caa60b38aea77dd9c7cb2",
+  "prometheus_image": "prom/prometheus:v3.7.2",
+  "grafana_image": "grafana/grafana:12.2.0",
+  "alertmanager_image": "prom/alertmanager:v0.28.1",
+  "telegraf_image": "telegraf:1.36.4"
+}

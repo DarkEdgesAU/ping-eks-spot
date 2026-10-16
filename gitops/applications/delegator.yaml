@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: delegator
+  namespace: argocd
+spec:
+  project: delegator
+  source:
+    repoURL: https://github.com/darkedges/pingdirectory-eks-spot.git
+    targetRevision: main
+    path: gitops/workloads/delegator
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: identity-delegator
+  syncPolicy:
+    syncOptions:
+    - RespectIgnoreDifferences=true
+    - FailOnSharedResource=true

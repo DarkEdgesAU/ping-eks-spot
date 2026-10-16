@@ -32,7 +32,7 @@ data:
   PA_ADMIN_PUBLIC_PORT_HTTPS: '9000'
   PA_ENGINE_PRIVATE_HOSTNAME: pd-pingaccess-engine
   PA_ENGINE_PRIVATE_PORT_HTTPS: '3000'
-  PA_ENGINE_PUBLIC_HOSTNAME: localhost
+  PA_ENGINE_PUBLIC_HOSTNAME: access.eks.darkedges.com
   PA_ENGINE_PUBLIC_PORT_HTTPS: '3000'
   PAZ_ENGINE_PRIVATE_HOSTNAME: pd-pingauthorize
   PAZ_ENGINE_PRIVATE_PORT_HTTPS: '443'
@@ -48,8 +48,8 @@ data:
   PD_CONSOLE_PUBLIC_PORT_HTTPS: '8443'
   PD_DELEGATOR_PRIVATE_HOSTNAME: pd-pingdelegator
   PD_DELEGATOR_PRIVATE_PORT_HTTPS: '6443'
-  PD_DELEGATOR_PUBLIC_HOSTNAME: localhost
-  PD_DELEGATOR_PUBLIC_PORT_HTTPS: '6443'
+  PD_DELEGATOR_PUBLIC_HOSTNAME: ext-pingdelegator.eks.darkedges.com
+  PD_DELEGATOR_PUBLIC_PORT_HTTPS: '443'
   PD_ENGINE_PRIVATE_HOSTNAME: pd-pingdirectory
   PD_ENGINE_PRIVATE_PORT_HTTPS: '443'
   PD_ENGINE_PRIVATE_PORT_LDAP: '389'
@@ -73,8 +73,8 @@ data:
   PF_ADMIN_PUBLIC_PORT_HTTPS: '9999'
   PF_ENGINE_PRIVATE_HOSTNAME: pd-pingfederate-engine
   PF_ENGINE_PRIVATE_PORT_HTTPS: '9031'
-  PF_ENGINE_PUBLIC_HOSTNAME: localhost
-  PF_ENGINE_PUBLIC_PORT_HTTPS: '9031'
+  PF_ENGINE_PUBLIC_HOSTNAME: id.eks.darkedges.com
+  PF_ENGINE_PUBLIC_PORT_HTTPS: '443'
   PING_IDENTITY_ACCEPT_EULA: 'YES'
   RETRY_TIMEOUT_SECONDS: '900'
   ROOT_USER_DN: cn=administrator
@@ -116,7 +116,12 @@ data:
   MAKELDIF_USERS: '20000'
   MAX_HEAP_SIZE: 4g
   ORCHESTRATION_TYPE: KUBERNETES
+  PA_ENGINE_PUBLIC_HOSTNAME: access.eks.darkedges.com
+  PD_DELEGATOR_PUBLIC_HOSTNAME: ext-pingdelegator.eks.darkedges.com
+  PD_DELEGATOR_PUBLIC_PORT_HTTPS: '443'
   PD_LICENSE_DIR: /run/ping-secrets
+  PF_ENGINE_PUBLIC_HOSTNAME: id.eks.darkedges.com
+  PF_ENGINE_PUBLIC_PORT_HTTPS: '443'
   PING_IDENTITY_ACCEPT_EULA: 'YES'
   RETRY_TIMEOUT_SECONDS: '900'
   ROOT_USER_DN: cn=administrator
@@ -195,6 +200,7 @@ metadata:
     app.kubernetes.io/name: pingdirectory
     helm.sh/chart: ping-devops-0.16.0
   name: pd-pingdirectory
+  namespace: identity-blue
 spec:
   podManagementPolicy: OrderedReady
   replicas: 3
@@ -206,7 +212,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: ab1fa7bc29b5bb378069bbd61dae53a540c26d4ca9e4b40b5144009e5aec3364
+        checksum/config: 82c85431e95a1edac60e1b1b77f8743c6c48a43d32be2e0ce2365380b3eca609
       labels:
         app.kubernetes.io/instance: pd
         app.kubernetes.io/managed-by: Helm
@@ -290,6 +296,56 @@ spec:
           readOnly: true
         - mountPath: /opt/out
           name: out-dir
+      - name: log-shipper
+        image: fluent/fluent-bit:4.2.3
+        args:
+        - -c
+        - /fluent-bit/etc/poc/sidecar.conf
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            memory: 192Mi
+        securityContext:
+          runAsUser: 9031
+          runAsGroup: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: PRODUCT
+          value: pingdirectory
+        - name: LOG_PATHS
+          value: /logs/instance/logs/*
+        - name: COLOUR
+          value: blue
+        - name: LOG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: log-shipper
+              key: password
+        volumeMounts:
+        - name: out-dir
+          mountPath: /logs
+          readOnly: true
+        - name: logging-config
+          mountPath: /fluent-bit/etc/poc
+          readOnly: true
+        - name: logging-credentials
+          mountPath: /credentials
+          readOnly: true
+        - name: logging-buffer
+          mountPath: /buffers
       enableServiceLinks: true
       initContainers:
       - args:
@@ -395,6 +451,15 @@ spec:
       - name: out-dir
         persistentVolumeClaim:
           claimName: out-dir
+      - name: logging-config
+        configMap:
+          name: ping-log-collector
+      - name: logging-credentials
+        secret:
+          secretName: log-shipper
+      - name: logging-buffer
+        emptyDir:
+          sizeLimit: 256Mi
   updateStrategy:
     rollingUpdate:
       partition: 0
@@ -413,3 +478,29 @@ spec:
   persistentVolumeClaimRetentionPolicy:
     whenDeleted: Retain
     whenScaled: Retain
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ping-log-collector
+  namespace: identity-blue
+data:
+  sidecar.conf: "[SERVICE]\n    Flush 2\n    Log_Level info\n    Parsers_File /fluent-bit/etc/poc/parsers.conf\n\
+    \    storage.path /buffers/chunks\n    HTTP_Server On\n    HTTP_Listen 0.0.0.0\n\
+    \    HTTP_Port 2020\n\n[INPUT]\n    Name tail\n    Path ${LOG_PATHS}\n    Exclude_Path\
+    \ *.gz,*.zip,*.lock,*.lck\n    Tag ping.files\n    Path_Key source_file\n    DB\
+    \ /buffers/tail.db\n    Read_from_Head On\n    Refresh_Interval 2\n    Rotate_Wait\
+    \ 10\n    Buffer_Max_Size 1M\n    Skip_Long_Lines On\n    storage.type filesystem\n\
+    \n[FILTER]\n    Name modify\n    Match *\n    Add namespace ${POD_NAMESPACE}\n\
+    \    Add pod ${POD_NAME}\n    Add product ${PRODUCT}\n    Add colour ${COLOUR}\n\
+    \    Add stream product_file\n\n[OUTPUT]\n    Name opensearch\n    Match *\n \
+    \   Host opensearch.logging.svc.cluster.local\n    Port 9200\n    HTTP_User logshipper\n\
+    \    HTTP_Passwd ${LOG_PASSWORD}\n    tls On\n    tls.verify On\n    tls.verify_hostname\
+    \ On\n    tls.ca_file /credentials/ca.crt\n    Logstash_Format On\n    Logstash_Prefix\
+    \ logs-ping\n    Suppress_Type_Name On\n    Generate_ID On\n    Retry_Limit False\n\
+    \    storage.total_limit_size 128M\n"
+  parsers.conf: "[PARSER]\n    Name cri\n    Format regex\n    Regex ^(?<time>[^ ]+)\
+    \ (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$\n    Time_Key time\n \
+    \   Time_Format %Y-%m-%dT%H:%M:%S.%L%z\n\n[PARSER]\n    Name kube_path\n    Format\
+    \ regex\n    Regex ^/var/log/containers/(?<pod>[^_]+)_(?<namespace>[^_]+)_(?<container>.+)-(?<container_id>[a-f0-9]+)\\\
+    .log$\n"

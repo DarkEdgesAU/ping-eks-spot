@@ -1,0 +1,13 @@
+# Loopback-only StatsD receiver is supplied by the optional metrics sidecar.
+# No Directory replica, assurance or routing settings are changed.
+dsconfig create-monitoring-endpoint \
+  --endpoint-name PlatformStatsD \
+  --type statsd \
+  --set enabled:true \
+  --set hostname:127.0.0.1 \
+  --set server-port:8125 \
+  --set connection-type:unencrypted-udp
+
+dsconfig set-plugin-prop \
+  --plugin-name "Stats Collector" \
+  --set enabled:true

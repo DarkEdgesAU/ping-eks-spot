@@ -1,0 +1,4 @@
+# Apply signing trust after the common Directory profile configuration.
+dsconfig create-trusted-certificate --certificate-name platform-pf-signing --set 'certificate</tmp/delegator-signing.crt'
+dsconfig create-access-token-validator --validator-name platform-delegator-jwt --type jwt --set enabled:true --set evaluation-order-index:1000 --set allowed-signing-algorithm:RS256 --set trusted-certificate:platform-pf-signing --set identity-mapper:platform-entryUUID --set subject-claim-name:Username
+dsconfig set-connection-handler-prop --handler-name 'HTTPS Connection Handler' --add 'http-servlet-extension:Delegated Admin'

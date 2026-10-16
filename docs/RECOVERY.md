@@ -1,5 +1,21 @@
 # Recover the lab after the 14 October teardown
 
+This walkthrough describes the **14 October** backup. For a later teardown,
+select that backup and follow its private `RESTORE.md`; do not assume the volume
+counts or repository counts below still apply.
+
+The local recovery helper also supports `identity-access-blue`,
+`identity-access-green`, `identity-central`, `identity-delegator`, `logging` and
+`monitoring`. Capture `<namespace>-resources.json` for every deployed namespace,
+including its Secrets and PVCs, together with `persistent-volumes.json`. It
+prepares their original runtime Secrets and retained disk bindings, preserving
+disk IDs and AZ affinity. It does not generate replacement credentials.
+Optional namespace inventories may be absent in historical backups only when
+no saved PV claims that namespace; otherwise preparation stops with an error.
+Review `prepared/volume-ids.json` and all expected PVC bindings before syncing
+any stateful Argo application. Legacy `identity-federate` migration-source disks
+remain excluded.
+
 Run these commands in **PowerShell 7**, from this repository. They rebuild AWS
 infrastructure and reuse the retained disks; they do not create fresh Directory
 or PF databases. Commands below are instructions, not actions already executed.

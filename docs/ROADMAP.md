@@ -8,6 +8,11 @@ The initial deployment is a development environment. It does not establish a pro
 
 ## Next implementation gates
 
+Monitoring, Delegator and PingCentral now have optional secret-free GitOps
+renderers and a local smoke-test workflow. Their EKS integration and acceptance
+steps are in [PLATFORM-SERVICES.md](PLATFORM-SERVICES.md); preparation does not
+establish product integration or hosted-service parity.
+
 PingAccess blue/green scaffolding and acceptance steps are in
 [PINGACCESS.md](PINGACCESS.md). Licensed bootstrap, shared-CA listener assignment,
 verified engine registration, PingFederate integration and protected application
