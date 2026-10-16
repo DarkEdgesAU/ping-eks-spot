@@ -19,6 +19,14 @@ variable "product_version" {
 variable "ca_certificate_file" { type = string }
 variable "base_dn" { type = string }
 variable "engine_hostname" { type = string }
+variable "public_base_url" {
+  type    = string
+  default = ""
+  validation {
+    condition     = var.public_base_url == "" || (startswith(var.public_base_url, "https://") && !endswith(var.public_base_url, "/"))
+    error_message = "Use an HTTPS public base URL without a trailing slash."
+  }
+}
 variable "ldap_password" {
   type      = string
   sensitive = true

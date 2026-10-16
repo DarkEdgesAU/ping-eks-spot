@@ -65,6 +65,7 @@ def execute(a,c,directory,password,url):
          'TF_VAR_admin_url':url,'TF_VAR_product_version':c['product_version'],
          'TF_VAR_ca_certificate_file':(pf.SECRET/'ca.crt').as_posix(),
          'TF_VAR_base_dn':directory['base_dn'],'TF_VAR_engine_hostname':c['engine_hostname'],
+         'TF_VAR_public_base_url':c.get('public_base_url', 'https://'+c['engine_hostname']),
          'TF_VAR_ldap_password':(pf.SECRET/'federate-ldap-password').read_text().strip()}
     project.run(['terraform','-chdir=terraform-federate','workspace','select','-or-create',a.target],env=env)
     plan=project.BUILD/f'pf-{a.target}.tfplan'

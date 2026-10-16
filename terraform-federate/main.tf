@@ -1,6 +1,6 @@
 resource "pingfederate_server_settings" "identity" {
   federation_info = {
-    base_url          = "https://${var.engine_hostname}"
+    base_url          = var.public_base_url != "" ? var.public_base_url : "https://${var.engine_hostname}"
     saml_2_entity_id  = "https://${var.engine_hostname}"
     saml_1x_issuer_id = var.engine_hostname
   }

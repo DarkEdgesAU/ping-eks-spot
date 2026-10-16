@@ -5,7 +5,10 @@ ingress are described in [docs/PINGACCESS.md](docs/PINGACCESS.md). Start with
 `access.example.json` and `make pa-render`; runtime secrets, image publication,
 licensed cluster startup and application configuration are explicit deployment
 steps. The PA starter does not yet configure CA-signed internal listeners or a
-working protected application/PingFederate integration.
+working protected application. The repeatable PingFederate runtime proxy at
+`https://access.eks.darkedges.com/identity/` is configured with
+`make pa-identity-plan`, `make pa-identity-apply` and `make pa-identity-verify`
+per colour; see [the integration steps](docs/PINGACCESS.md#front-pingfederate-at-identity).
 
 A workspace for Terraform-managed EKS, PingDirectory and PingFederate profiles,
 and Argo CD deployments across three AWS Availability Zones. Argo CD manages

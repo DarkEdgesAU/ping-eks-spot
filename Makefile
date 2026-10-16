@@ -58,6 +58,14 @@ pa-promote:
 pa-status:
 	$(PYTHON) scripts/access.py status
 
+.PHONY: pa-identity-plan pa-identity-apply pa-identity-verify
+pa-identity-plan:
+	$(PYTHON) scripts/access_config.py --target $(TARGET)
+pa-identity-apply:
+	$(PYTHON) scripts/access_config.py --target $(TARGET) --apply
+pa-identity-verify:
+	$(PYTHON) scripts/access_config.py --target $(TARGET) --verify
+
 .PHONY: gitops-export argocd-render argocd-secrets argocd-bootstrap argocd-ingress argocd-applications
 gitops-export:
 	$(PYTHON) scripts/gitops.py export

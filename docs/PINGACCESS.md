@@ -69,6 +69,66 @@ promotion; standby shared engine routes return 503.
 
 ## Configuration and acceptance
 
+### Front PingFederate at /identity/
+
+`scripts/access_config.py` configures the native PingFederate runtime proxy.
+Each PA colour targets its matching PF engine Service on internal HTTPS 9031.
+The public virtual host is `access.eks.darkedges.com:443` and context root is
+`/identity` (no trailing slash in configuration). PF handles authentication;
+no PA web session is required to reach PF login endpoints.
+
+Set `identity_context_root` to `/identity` in `access.json` and set
+`public_base_url` to `https://access.eks.darkedges.com/identity` in `federate.json`.
+The latter prevents later PF configuration Terraform runs reverting the URL.
+Existing federation entity IDs are preserved by this integration command.
+
+```powershell
+make pa-identity-plan TARGET=blue
+make pa-identity-apply TARGET=blue
+make pa-identity-verify TARGET=blue
+make pa-identity-plan TARGET=green
+make pa-identity-apply TARGET=green
+make pa-identity-verify TARGET=green
+```
+
+Plan reads the current APIs without sending mutations. Apply exports both
+configurations beneath `.secrets/identity-backups/` before making individual
+API updates and requesting PF cluster replication. It does not bulk-import
+configuration or change active colours. Rerunning adopts named virtual hosts,
+certificates and trust groups rather than creating duplicates. Treat backups
+as secrets; retain PA master keys separately for full disaster recovery.
+The request rewrite removes `/identity` before forwarding to PF's existing
+root runtime; PF's public base URL generates the prefixed links and metadata.
+The verification command tunnels directly to a ready PA engine, verifies TLS,
+and checks heartbeat plus the public paths in OpenID discovery metadata.
+
+PF API credentials default to `.secrets/federate-admin-password`. If a colour
+has a different password, put its current password in
+`.secrets/pf-COLOUR/admin-password`. Never put the password on the command line.
+An API 403 means credentials or administrator permissions need checking before
+retrying. No green changes occur when its initial PF API read fails.
+
+Current PF runtime certificates have `CN=localhost`. The command retrieves
+their public certificate through authenticated Kubernetes, pins it in a PA
+trust group and verifies the expected hostname `localhost`. Certificate and
+date checking stay enabled. This is a development bridge, not the shared CA
+listener migration. Rerun after replacing PF certificates, and update the
+expected hostname to their actual SAN before adopting CA-issued listeners.
+
+Verify `https://access.eks.darkedges.com/identity/pf/heartbeat.ping` and
+`https://access.eks.darkedges.com/identity/.well-known/openid-configuration`.
+The prefix alone is not a login application: exercise a real configured OIDC
+or SAML client and check redirects, logout and metadata before promotion.
+Clients consuming PF metadata may need to refresh their endpoint URLs.
+The default OAuth issuer also follows the new base URL. Update client issuer
+validation accordingly; existing tokens issued under the old issuer require
+an explicit migration decision. The `/identity/` root itself can return PF's
+normal 404 because no particular login transaction was requested.
+Promote PF and PA as a coordinated matching-colour pair; their ingress changes
+are separate and do not promise session continuity.
+
+See [Ping's proxied runtime settings](https://docs.pingidentity.com/pingaccess/9.1/pingaccess_user_interface_reference_guide/pa_pf_runtime.html).
+
 The profile initializes an admin and cluster. It intentionally does not ship a
 working protected application, PF OAuth client, token-provider secret or demo
 users. Configure matching PF OAuth clients and PA token-provider settings,
