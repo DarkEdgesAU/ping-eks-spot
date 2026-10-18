@@ -153,6 +153,10 @@ make lifecycle-plan BACKUP_ID=retained-20261016
 In GitHub Actions choose **EKS lifecycle**, operation `setup`, and completed backup
 ID `retained-20261016`. Approve the environment. Setup restores namespaces, Secrets,
 AZ-bound retained PV/PVCs and routing before ordered Argo synchronization. It uses
+the saved Argo TLS certificate/key pairs from version-pinned bootstrap files,
+validating their key matches, issuer and validity before provisioning. TLS Secrets
+are installed before Helm; Helm-owned ConfigMap data is restored after bootstrap
+to preserve Helm ownership. No replacement TLS identities are generated. It uses
 the saved seed colour, then its peer, proxy, PF/PA and optional applications. Setup
 plans refuse resource deletion/replacement. Original volumes must be available, or
 already bound to this exact target cluster during a retry; no force-detach is used.
