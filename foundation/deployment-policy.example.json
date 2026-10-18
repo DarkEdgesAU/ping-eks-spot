@@ -26,6 +26,17 @@
       "Condition": {"StringEquals": {"aws:RequestedRegion": "ap-southeast-2"}}
     },
     {
+      "Sid": "ReadRuntimeImageMetadata",
+      "Effect": "Allow",
+      "Action": "ecr:DescribeImages",
+      "Resource": [
+        "arn:aws:ecr:ap-southeast-2:447061058131:repository/pd-spot-dev/pingdirectory",
+        "arn:aws:ecr:ap-southeast-2:447061058131:repository/pd-spot-dev/pingdirectoryproxy",
+        "arn:aws:ecr:ap-southeast-2:447061058131:repository/pd-spot-dev/pingfederate",
+        "arn:aws:ecr:ap-southeast-2:447061058131:repository/pd-spot-dev/pingaccess"
+      ]
+    },
+    {
       "Sid": "RuntimeIamOnly",
       "Effect": "Allow",
       "Action": ["iam:CreateRole", "iam:GetRole", "iam:UpdateRole", "iam:UpdateAssumeRolePolicy", "iam:DeleteRole",
