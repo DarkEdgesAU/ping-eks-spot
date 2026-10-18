@@ -43,6 +43,37 @@ def encoded(value):
     return json.dumps(value, sort_keys=True, separators=(',', ':')).encode()
 
 
+def argocd_tls_from_files(files):
+    """Restore existing listener identities from version-pinned bootstrap files."""
+    from cryptography import x509
+    from cryptography.hazmat.primitives import serialization
+    def read(name):
+        if name not in files:
+            raise ValueError('Saved Argo TLS material is missing')
+        return base64.b64decode(files[name], validate=True)
+    ca_pem = read('.secrets/ca.crt')
+    ca = x509.load_pem_x509_certificate(ca_pem)
+    result = []
+    for name in ('argocd-server-tls', 'argocd-repo-server-tls'):
+        cert_pem = read('.secrets/argocd/'+name+'.crt')
+        key_pem = read('.secrets/argocd/'+name+'.key')
+        cert = x509.load_pem_x509_certificate(cert_pem)
+        key = serialization.load_pem_private_key(key_pem, password=None)
+        def public_bytes(public):
+            return public.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+        if public_bytes(cert.public_key()) != public_bytes(key.public_key()):
+            raise ValueError('Saved Argo TLS key does not match its certificate')
+        cert.verify_directly_issued_by(ca)
+        now = dt.datetime.now(dt.timezone.utc)
+        if not cert.not_valid_before_utc <= now < cert.not_valid_after_utc:
+            raise ValueError('Saved Argo TLS certificate is not currently valid')
+        chain = cert_pem if ca_pem in cert_pem else cert_pem+ca_pem
+        result.append({'apiVersion': 'v1', 'kind': 'Secret', 'metadata': {'name': name, 'namespace': 'argocd'},
+            'type': 'kubernetes.io/tls', 'data': {k: base64.b64encode(v).decode() for k, v in {
+                'tls.key': key_pem, 'tls.crt': chain, 'ca.crt': ca_pem}.items()}})
+    return result
+
+
 def validate_config(c):
     if c['account_id'] != '447061058131' or c['region'] != 'ap-southeast-2' or c['cluster_name'] != 'pd-spot-dev':
         raise ValueError('Unexpected lab account/region/cluster')
@@ -505,6 +536,8 @@ class Lifecycle:
                     raise ValueError('Bootstrap files differ from encrypted recovery bundle')
             finally:
                 vault.close()
+        # Validate original TLS identities before provisioning any infrastructure.
+        prepared['20-runtime-secrets.yaml'].extend(argocd_tls_from_files(bundle['files']))
         self.restore_files(bundle['files'])
         # Explicit encrypted-backup mode uses independently preserved exact values.
         handles = {}
@@ -536,13 +569,7 @@ class Lifecycle:
         self.terraform()
         self.kubeconfig()
         command([sys.executable, ROOT/'scripts/project.py', 'bootstrap'])
-        for key in ('00-namespaces.yaml', '20-runtime-secrets.yaml', '30-retained-claims.yaml', '40-runtime-configmaps.yaml'):
-            for doc in prepared[key]:
-                self.kube('apply', '-f', '-', data=json.dumps(doc))
-        (ROOT/'.secrets/vault-managed').touch(mode=0o600)
-        # Existing bootstrap uses no secret generation; runtime values were restored above.
-        for script, args in [('federate.py', ['install-controller']), ('gitops.py', ['bootstrap'])]:
-            command([sys.executable, ROOT/'scripts'/script, *args])
+        self.bootstrap_runtime(prepared)
         project_doc = ROOT/'gitops/applications/project.yaml'
         self.kube('apply', '-f', str(project_doc))
         import yaml
@@ -596,6 +623,23 @@ class Lifecycle:
         self.put('backups/'+backup_id+'/restore-complete.json', encoded({'backup_id': backup_id,
             'volumes': handles, 'source': 'snapshots' if from_snapshots else 'original-volumes'}))
         print('Restore verified:', backup_id)
+
+    def bootstrap_runtime(self, prepared):
+        for key in ('00-namespaces.yaml', '20-runtime-secrets.yaml', '30-retained-claims.yaml'):
+            for doc in prepared[key]:
+                self.kube('apply', '-f', '-', data=json.dumps(doc))
+        runtime = prepared['40-runtime-configmaps.yaml']
+        for doc in runtime:
+            if doc['metadata']['namespace'] != 'argocd':
+                self.kube('apply', '-f', '-', data=json.dumps(doc))
+        (ROOT/'.secrets/vault-managed').touch(mode=0o600)
+        for script, args in [('federate.py', ['install-controller']), ('gitops.py', ['bootstrap'])]:
+            command([sys.executable, ROOT/'scripts'/script, *args])
+        # Helm creates its ConfigMaps first; restoring their data afterwards keeps
+        # Helm ownership intact instead of conflicting with a pre-created resource.
+        for doc in runtime:
+            if doc['metadata']['namespace'] == 'argocd':
+                self.kube('apply', '-f', '-', data=json.dumps(doc))
 
 
 def main():
