@@ -74,6 +74,39 @@ def argocd_tls_from_files(files):
     return result
 
 
+def logging_secrets_from_files(files, documents):
+    """Fill missing optional logging Secrets from exact pinned bootstrap bytes."""
+    required = set()
+    for doc in documents:
+        if doc.get('kind') not in ('StatefulSet', 'Deployment', 'DaemonSet'):
+            continue
+        namespace = doc.get('metadata', {}).get('namespace')
+        pod = doc.get('spec', {}).get('template', {}).get('spec', {})
+        names = {v.get('secret', {}).get('secretName') for v in pod.get('volumes', [])}
+        for container in pod.get('containers', []) + pod.get('initContainers', []):
+            names.update(e.get('valueFrom', {}).get('secretKeyRef', {}).get('name')
+                         for e in container.get('env', []))
+        required.update((namespace, name) for name in names
+                        if name in ('log-shipper', 'logging-auth', 'logging-tls'))
+    mappings = {
+        'log-shipper': {'password': 'shipper-password', 'ca.crt': 'ca.crt'},
+        'logging-auth': {'internal_users.yml': 'internal_users.yml', 'dashboards-password': 'dashboards-password'},
+        'logging-tls': {name: name for name in ('opensearch.crt', 'opensearch.key', 'dashboards.crt', 'dashboards.key', 'ca.crt')},
+    }
+    result = []
+    for namespace, name in sorted(required):
+        data = {}
+        for key, filename in mappings[name].items():
+            path = '.secrets/logging/'+filename
+            if path not in files:
+                raise ValueError('Saved logging bootstrap material is missing')
+            base64.b64decode(files[path], validate=True)
+            data[key] = files[path]
+        result.append({'apiVersion': 'v1', 'kind': 'Secret', 'metadata': {
+            'name': name, 'namespace': namespace}, 'type': 'Opaque', 'data': data})
+    return result
+
+
 def validate_config(c):
     if c['account_id'] != '447061058131' or c['region'] != 'ap-southeast-2' or c['cluster_name'] != 'pd-spot-dev':
         raise ValueError('Unexpected lab account/region/cluster')
@@ -538,6 +571,19 @@ class Lifecycle:
                 vault.close()
         # Validate original TLS identities before provisioning any infrastructure.
         prepared['20-runtime-secrets.yaml'].extend(argocd_tls_from_files(bundle['files']))
+        import yaml
+        documents = [doc for path in sorted((ROOT/'gitops/workloads').rglob('*.yaml'))
+                     for doc in yaml.safe_load_all(path.read_text()) if isinstance(doc, dict)]
+        existing = {(doc['metadata']['namespace'], doc['metadata']['name'])
+                    for doc in prepared['20-runtime-secrets.yaml']}
+        for doc in logging_secrets_from_files(bundle['files'], documents):
+            identity = (doc['metadata']['namespace'], doc['metadata']['name'])
+            if identity not in existing:
+                prepared['20-runtime-secrets.yaml'].append(doc)
+                namespace = identity[0]
+                if not any(x['metadata']['name'] == namespace for x in prepared['00-namespaces.yaml']):
+                    prepared['00-namespaces.yaml'].append({'apiVersion': 'v1', 'kind': 'Namespace',
+                                                         'metadata': {'name': namespace}})
         self.restore_files(bundle['files'])
         # Explicit encrypted-backup mode uses independently preserved exact values.
         handles = {}
