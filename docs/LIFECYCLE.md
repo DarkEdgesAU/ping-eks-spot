@@ -195,6 +195,13 @@ change. Review new ingress addresses and update the separate Cloudflare configur
 before claiming external URLs have recovered. No Cloudflare API credentials are stored
 or DNS records changed by these workflows.
 
+Older backups may predate the logging sidecar Secrets referenced by current GitOps
+manifests. Setup restores missing logging Secrets from the version-pinned logging
+passwords and certificates in the bootstrap files before syncing workloads. It
+does not generate new credentials or replace Secrets already in the inventory.
+Application destination namespaces are also created before sync, so optional
+applications introduced after an older backup can be reconciled safely.
+
 ## Failure handling and acceptance
 
 Snapshot, checksum, Vault, identity or verification failures stop the operation without

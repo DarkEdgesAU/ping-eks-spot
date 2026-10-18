@@ -26,6 +26,17 @@
       "Condition": {"StringEquals": {"aws:RequestedRegion": "ap-southeast-2"}}
     },
     {
+      "Sid": "ReadRuntimeImageMetadata",
+      "Effect": "Allow",
+      "Action": "ecr:DescribeImages",
+      "Resource": [
+        "arn:aws:ecr:ap-southeast-2:447061058131:repository/pd-spot-dev/pingdirectory",
+        "arn:aws:ecr:ap-southeast-2:447061058131:repository/pd-spot-dev/pingdirectoryproxy",
+        "arn:aws:ecr:ap-southeast-2:447061058131:repository/pd-spot-dev/pingfederate",
+        "arn:aws:ecr:ap-southeast-2:447061058131:repository/pd-spot-dev/pingaccess"
+      ]
+    },
+    {
       "Sid": "RuntimeIamOnly",
       "Effect": "Allow",
       "Action": ["iam:CreateRole", "iam:GetRole", "iam:UpdateRole", "iam:UpdateAssumeRolePolicy", "iam:DeleteRole",
@@ -43,6 +54,12 @@
       "Action": ["logs:CreateLogGroup", "logs:DeleteLogGroup", "logs:DescribeLogGroups", "logs:PutRetentionPolicy",
         "logs:DeleteRetentionPolicy", "logs:TagResource", "logs:UntagResource", "logs:ListTagsForResource"],
       "Resource": ["arn:aws:logs:ap-southeast-2:447061058131:log-group:/aws/eks/pd-spot-dev/cluster", "arn:aws:logs:ap-southeast-2:447061058131:log-group:/aws/eks/pd-spot-dev/cluster:*"]
+    },
+    {
+      "Sid": "ReadEksNodegroupServiceLinkedRole",
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": "arn:aws:iam::447061058131:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup"
     },
     {
       "Sid": "EksServiceLinkedRoles",
