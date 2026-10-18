@@ -19,6 +19,9 @@ to the transferred repository. Add it at the organisation's Installed GitHub App
 settings. Installation initially returned 403; Helm installation alone does not
 prove successful runner registration.
 
+The runner image is pinned to 2.338.0. Keep this pin current: GitHub can stop
+assigning jobs to outdated runners. See [runner update requirements](https://docs.github.com/en/actions/reference/runners/self-hosted-runners#runner-software-updates-on-self-hosted-runners).
+
 ```powershell
 helm --kube-context docker-desktop upgrade --install ping-eks-lifecycle `
   oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set `
