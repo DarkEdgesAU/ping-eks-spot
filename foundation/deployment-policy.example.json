@@ -56,6 +56,12 @@
       "Resource": ["arn:aws:logs:ap-southeast-2:447061058131:log-group:/aws/eks/pd-spot-dev/cluster", "arn:aws:logs:ap-southeast-2:447061058131:log-group:/aws/eks/pd-spot-dev/cluster:*"]
     },
     {
+      "Sid": "ReadEksNodegroupServiceLinkedRole",
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": "arn:aws:iam::447061058131:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup"
+    },
+    {
       "Sid": "EksServiceLinkedRoles",
       "Effect": "Allow",
       "Action": "iam:CreateServiceLinkedRole",
