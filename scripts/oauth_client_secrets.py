@@ -22,6 +22,8 @@ def runtime_files():
 
 
 def prepare(image=None):
+    from vault_runtime import generator_guard
+    generator_guard()
     import federate
     image = image or 'pingidentity/pingfederate:'+federate.config()['base_image_tag']
     if ':' not in image or image.endswith((':latest', ':edge')):

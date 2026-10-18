@@ -1,5 +1,9 @@
 # PingDirectory EKS Spot development project
 
+Manual GitHub Actions setup/shutdown with retained EBS volumes, recovery snapshots
+and local Vault is documented in [docs/LIFECYCLE.md](docs/LIFECYCLE.md). Persistent
+foundation bootstrap and a live recovery rehearsal are required before first use.
+
 Optional Prometheus/Grafana, Delegated Admin and PingCentral preparation and the
 ordered startup commands are in [docs/PLATFORM-SERVICES.md](docs/PLATFORM-SERVICES.md).
 Start with `make platform-render`; no AWS deployment is performed by rendering.

@@ -6,7 +6,7 @@ metadata:
 spec:
   project: ping-workloads
   source:
-    repoURL: https://github.com/darkedges/pingdirectory-eks-spot.git
+    repoURL: https://github.com/DarkEdgesAU/pingdirectory-eks-spot.git
     targetRevision: main
     path: gitops/workloads/pf-blue
     directory:

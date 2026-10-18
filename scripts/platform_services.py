@@ -307,6 +307,8 @@ def integration_plan(c):
 
 
 def prepare():
+    from vault_runtime import generator_guard
+    generator_guard()
     PRIVATE.mkdir(parents=True, exist_ok=True)
     ca = ROOT/'.secrets'
     if not (ca/'ca.key').exists(): raise ValueError('Create or restore the existing internal CA first')
@@ -344,6 +346,8 @@ def prepare():
 
 
 def install_secrets():
+    from vault_runtime import generator_guard
+    generator_guard()
     license_path = ROOT/'.secrets/PingCentral.lic'
     creds = {n: os.environ.get(n, '') for n in ('PING_IDENTITY_DEVOPS_USER', 'PING_IDENTITY_DEVOPS_KEY')}
     if config()['central_enabled'] and not license_path.exists() and not all(creds.values()):

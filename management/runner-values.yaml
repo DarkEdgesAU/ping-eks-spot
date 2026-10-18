@@ -1,0 +1,15 @@
+# Matches the existing local ARC chart, version 0.14.2. Dedicated repository scope.
+githubConfigUrl: https://github.com/DarkEdgesAU/pingdirectory-eks-spot
+githubConfigSecret: arc-runner-set-github-app
+runnerScaleSetName: ping-eks-lifecycle
+minRunners: 0
+maxRunners: 1
+controllerServiceAccount:
+  namespace: arc-systems
+  name: arc-gha-rs-controller
+template:
+  spec:
+    containers:
+      - name: runner
+        image: ghcr.io/actions/actions-runner:2.331.0
+        command: ["/home/runner/run.sh"]

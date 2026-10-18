@@ -198,6 +198,8 @@ def validate(c):
 
 
 def secrets(c):
+    from vault_runtime import generator_guard
+    generator_guard()
     folder=ROOT/'.secrets/argocd'
     ca=ROOT/'.secrets'
     if not (ca/'ca.key').exists() or not (ca/'ca.crt').exists():

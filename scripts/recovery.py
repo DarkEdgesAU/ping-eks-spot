@@ -42,11 +42,20 @@ def binding(pv,pvc):
 
 
 def prepare(backup):
-    pvs=json.loads((backup/'persistent-volumes.json').read_text())['items']
-    namespaces=[]; secrets=[]; runtime=[]; claims=[]; volumes=[]
+    inventories={'persistent-volumes.json':json.loads((backup/'persistent-volumes.json').read_text())}
     for namespace in (*WORKLOAD_NAMESPACES,'argocd'):
         source=backup/f'{namespace}-resources.json'
-        if not source.is_file():
+        if source.is_file(): inventories[source.name]=json.loads(source.read_text())
+    return prepare_inventory(inventories)
+
+
+def prepare_inventory(inventories):
+    """Prepare in memory so runner secret delivery needs no plaintext temp files."""
+    pvs=inventories['persistent-volumes.json']['items']
+    namespaces=[]; secrets=[]; runtime=[]; claims=[]; volumes=[]
+    for namespace in (*WORKLOAD_NAMESPACES,'argocd'):
+        source=inventories.get(f'{namespace}-resources.json')
+        if source is None:
             # Older backups predate optional services. But a saved PV belonging
             # to one proves its inventory is required for safe recovery.
             retained=any(pv.get('spec',{}).get('claimRef',{}).get('namespace')==namespace for pv in pvs)
@@ -54,7 +63,7 @@ def prepare(backup):
                 raise ValueError('Missing namespace inventory: '+namespace)
             continue
         namespaces.append({'apiVersion':'v1','kind':'Namespace','metadata':{'name':namespace}})
-        resources=json.loads(source.read_text())['items']
+        resources=source['items']
         for resource in resources:
             if resource['kind']=='Secret':
                 cleaned=clean_secret(resource)

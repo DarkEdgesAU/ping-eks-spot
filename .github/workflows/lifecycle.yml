@@ -1,0 +1,95 @@
+name: EKS lifecycle
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Manual lab lifecycle operation
+        type: choice
+        options: [plan, backup, shutdown, setup]
+        required: true
+      backup_id:
+        description: Immutable backup ID; setup requires a completed backup
+        type: string
+        required: true
+      secret_source:
+        description: Restore secrets from Vault or independent encrypted recovery bundle
+        type: choice
+        options: [vault, encrypted-backup]
+        default: vault
+      from_snapshots:
+        description: Recreate volumes from snapshots instead of reusing originals
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: ping-eks-lifecycle
+  cancel-in-progress: false
+jobs:
+  lifecycle:
+    if: github.ref == 'refs/heads/main'
+    environment: eks-lifecycle
+    runs-on: ping-eks-lifecycle
+    timeout-minutes: 240
+    env:
+      PING_SECRET_SOURCE: vault
+      AWS_REGION: ap-southeast-2
+      VAULT_ADDR: http://vault.hashicorp-vault.svc.cluster.local:8200
+      TF_VAR_lifecycle_principal_arn: ${{ vars.AWS_LIFECYCLE_ROLE_ARN }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: '1.13.5'
+          terraform_wrapper: false
+      - uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
+        with:
+          version: 'v3.19.0'
+      - uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
+        with:
+          version: 'v1.35.0'
+      - name: Install dependencies and AWS CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig" >> "$GITHUB_ENV"
+          python -m pip install -r requirements.txt
+          curl --fail --silent --show-error https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o "$RUNNER_TEMP/awscli.zip"
+          unzip -q "$RUNNER_TEMP/awscli.zip" -d "$RUNNER_TEMP/awscli"
+          "$RUNNER_TEMP/awscli/aws/install" -i "$RUNNER_TEMP/aws-cli" -b "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_LIFECYCLE_ROLE_ARN }}
+          aws-region: ap-southeast-2
+          allowed-account-ids: '447061058131'
+          role-duration-seconds: 14400
+      - name: Read non-secret lifecycle settings
+        env:
+          LIFECYCLE_CONFIG: ${{ vars.LIFECYCLE_CONFIG }}
+        run: |
+          python -c 'import json,os,pathlib; c=json.loads(os.environ["LIFECYCLE_CONFIG"]); pathlib.Path("lifecycle.json").write_text(json.dumps(c))'
+      - name: Execute guarded operation
+        env:
+          OPERATION: ${{ inputs.operation }}
+          BACKUP_ID: ${{ inputs.backup_id }}
+          SECRET_SOURCE: ${{ inputs.secret_source }}
+          FROM_SNAPSHOTS: ${{ inputs.from_snapshots }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=("$OPERATION" --backup-id "$BACKUP_ID" --secret-source "$SECRET_SOURCE")
+          if [[ "$FROM_SNAPSHOTS" == true ]]; then args+=(--from-snapshots); fi
+          python scripts/lifecycle.py "${args[@]}"
+      - name: Remove private workspace files
+        if: always()
+        shell: bash
+        run: |
+          python -c 'import pathlib,shutil; [shutil.rmtree(p,ignore_errors=True) for p in [".secrets","terraform-federate/terraform.tfstate.d"]]; [pathlib.Path(p).unlink(missing_ok=True) for p in ["config.json","federate.json","access.json","observability.json","platform-services.json","gitops/config.json","terraform/terraform.tfvars","terraform-federate/terraform.tfstate","lifecycle.json"]]'
+          rm -f "$KUBECONFIG"

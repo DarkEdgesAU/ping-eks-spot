@@ -186,6 +186,8 @@ def manifests():
 
 
 def prepare_secrets():
+    from vault_runtime import generator_guard
+    generator_guard()
     import bcrypt
     PRIVATE.mkdir(parents=True, exist_ok=True)
     ca = ROOT/'.secrets'
@@ -234,6 +236,8 @@ def export():
 
 
 def cluster_secrets():
+    from vault_runtime import generator_guard
+    generator_guard()
     import project
     project.check_context(project.config())
     prepare_secrets()

@@ -1,0 +1,22 @@
+name: Inspect lifecycle identity
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  claims:
+    if: github.ref == 'refs/heads/main'
+    environment: eks-lifecycle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print identity claims only, never the token
+        run: |
+          python3 - <<'PY'
+          import base64,json,os,urllib.request
+          url=os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']+'&audience=sts.amazonaws.com'
+          req=urllib.request.Request(url,headers={'Authorization':'Bearer '+os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']})
+          with urllib.request.urlopen(req) as response: token=json.load(response)['value']
+          claims=json.loads(base64.urlsafe_b64decode(token.split('.')[1]+'=='))
+          print(json.dumps({k:claims.get(k) for k in ['sub','aud','repository_id','repository_owner_id','ref','environment','workflow_ref']},indent=2))
+          PY
