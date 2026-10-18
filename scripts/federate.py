@@ -67,6 +67,8 @@ def system_key(path):
 
 
 def local_secrets(c):
+    from vault_runtime import generator_guard
+    generator_guard()
     # Directory and PF share the CA, but never share their TLS private keys.
     if not (SECRET/'ca.key').exists() or not (SECRET/'ca.crt').exists():
         raise ValueError('Run make secrets first to create the shared internal CA')

@@ -1,5 +1,5 @@
 {
-  "repo_url": "https://github.com/darkedges/pingdirectory-eks-spot.git",
+  "repo_url": "https://github.com/DarkEdgesAU/pingdirectory-eks-spot.git",
   "revision": "main",
   "ecr_prefix": "447061058131.dkr.ecr.ap-southeast-2.amazonaws.com/pd-spot-dev",
   "hostname": "argocd.eks.darkedges.com",

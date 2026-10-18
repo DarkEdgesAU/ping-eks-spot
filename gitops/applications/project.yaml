@@ -6,7 +6,7 @@ metadata:
 spec:
   description: Manual Ping workload deployments; runtime routing and secrets are operator-owned
   sourceRepos:
-  - https://github.com/darkedges/pingdirectory-eks-spot.git
+  - https://github.com/DarkEdgesAU/pingdirectory-eks-spot.git
   destinations:
   - server: https://kubernetes.default.svc
     namespace: identity-access-blue

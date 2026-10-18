@@ -8,7 +8,7 @@ output "availability_zones" {
   value = var.availability_zones
 }
 output "repositories" {
-  value = { for name, repo in aws_ecr_repository.images : name => repo.repository_url }
+  value = { for name, repo in data.aws_ecr_repository.images : name => repo.repository_url }
 }
 output "addon_versions" {
   value = merge({ for name, addon in aws_eks_addon.core : name => addon.addon_version }, { aws-ebs-csi-driver = aws_eks_addon.ebs.addon_version })

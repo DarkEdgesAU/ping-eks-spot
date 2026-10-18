@@ -1,0 +1,17 @@
+{
+  "account_id": "447061058131",
+  "region": "ap-southeast-2",
+  "cluster_name": "pd-spot-dev",
+  "state_bucket": "REPLACE_FROM_FOUNDATION_OUTPUT",
+  "state_key": "eks/terraform.tfstate",
+  "backup_bucket": "REPLACE_FROM_FOUNDATION_OUTPUT",
+  "kms_key_arn": "REPLACE_FROM_FOUNDATION_OUTPUT",
+  "vault_address": "http://vault.hashicorp-vault.svc.cluster.local:8200",
+  "consistency": "crash-consistent",
+  "pre_backup_commands": [],
+  "verification_commands": [
+    ["python3", "scripts/project.py", "status"],
+    ["python3", "scripts/federate.py", "status"],
+    ["python3", "scripts/access.py", "status"]
+  ]
+}

@@ -149,6 +149,8 @@ def main():
         return
     out=project.check_context(project.config())
     if a.command=='secrets':
+        from vault_runtime import generator_guard
+        generator_guard()
         for path in (ROOT/'.secrets/ca.crt',ROOT/'.secrets/PingAccess.lic'):
             if not path.is_file(): raise ValueError('Supply '+str(path))
         for colour in project.COLOURS:

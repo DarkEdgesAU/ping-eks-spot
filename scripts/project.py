@@ -261,6 +261,8 @@ def bootstrap(c):
            'allowVolumeExpansion':True,'parameters':{'type':'gp3','encrypted':'true'}})
 
 def secrets(c):
+    from vault_runtime import generator_guard
+    generator_guard()
     check_context(c)
     directory = ROOT / '.secrets'
     directory.mkdir(mode=0o700, exist_ok=True)
@@ -321,7 +323,7 @@ def dsconfig(pod, extra):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['validate','render','kubeconfig','secrets','build-images','deploy','promote','status'])
+    parser.add_argument('command', choices=['validate','render','kubeconfig','bootstrap','secrets','build-images','deploy','promote','status'])
     parser.add_argument('--target', choices=['blue','green','proxy'], default='blue')
     parser.add_argument('--evidence', default='')
     a = parser.parse_args()
@@ -344,6 +346,9 @@ def main():
         run(['aws','eks','update-kubeconfig','--name',out['cluster_name'],'--region',out['region']])
     elif a.command == 'secrets':
         secrets(c)
+    elif a.command == 'bootstrap':
+        check_context(c)
+        bootstrap(c)
     elif a.command == 'build-images':
         out = tf_outputs()
         registry = next(iter(out['repositories'].values())).split('/')[0]

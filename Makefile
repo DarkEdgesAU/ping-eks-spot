@@ -60,6 +60,8 @@ terraform-init:
 	terraform -chdir=terraform init
 	terraform -chdir=terraform-federate init
 terraform-check:
+	terraform -chdir=foundation fmt -check -recursive
+	terraform -chdir=foundation validate
 	terraform -chdir=terraform fmt -check -recursive
 	terraform -chdir=terraform validate
 	terraform -chdir=terraform-federate fmt -check -recursive
@@ -139,6 +141,17 @@ status:
 	$(PYTHON) scripts/project.py status
 forward:
 	kubectl -n identity-proxy port-forward service/pd-pingdirectoryproxy 1636:636
+
+.PHONY: lifecycle-plan lifecycle-backup lifecycle-shutdown lifecycle-setup
+BACKUP_ID ?=
+lifecycle-plan:
+	$(PYTHON) scripts/lifecycle.py plan --backup-id "$(BACKUP_ID)"
+lifecycle-backup:
+	$(PYTHON) scripts/lifecycle.py backup --backup-id "$(BACKUP_ID)"
+lifecycle-shutdown:
+	$(PYTHON) scripts/lifecycle.py shutdown --backup-id "$(BACKUP_ID)"
+lifecycle-setup:
+	$(PYTHON) scripts/lifecycle.py setup --backup-id "$(BACKUP_ID)"
 
 .PHONY: loadtest-init loadtest-seed loadtest-run loadtest-reconcile loadtest-report loadtest-cleanup
 loadtest-init:

@@ -9,6 +9,11 @@ federate.json
 access.json
 observability.json
 platform-services.json
+lifecycle.json
+foundation/backend.hcl
+foundation/backend.tf
+foundation/ecr-imports.tf
+terraform/backend.hcl
 /docs/openapi.json
 .env
 .env.*

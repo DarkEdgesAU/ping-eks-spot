@@ -1,0 +1,16 @@
+{
+  "role_type": "jwt",
+  "user_claim": "repository_id",
+  "bound_audiences": ["ping-eks-lifecycle"],
+  "bound_claims": {
+    "repository_id": "1415576809",
+    "repository_owner_id": "299816438",
+    "repository": "DarkEdgesAU/pingdirectory-eks-spot",
+    "ref": "refs/heads/main",
+    "environment": "eks-lifecycle",
+    "workflow_ref": "DarkEdgesAU/pingdirectory-eks-spot/.github/workflows/lifecycle.yml@refs/heads/main"
+  },
+  "token_policies": ["ping-eks-restore"],
+  "token_ttl": "15m",
+  "token_max_ttl": "30m"
+}

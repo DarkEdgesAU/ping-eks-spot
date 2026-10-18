@@ -164,15 +164,15 @@ resource "aws_eks_addon" "ebs" {
   resolve_conflicts_on_update = "PRESERVE"
   depends_on                  = [aws_eks_addon.core, aws_eks_pod_identity_association.ebs, aws_iam_role_policy_attachment.ebs]
 }
-resource "aws_ecr_repository" "images" {
-  for_each             = toset(["pingdirectory", "pingdirectoryproxy", "pingfederate", "pingaccess"])
-  name                 = "${var.cluster_name}/${each.key}"
-  image_tag_mutability = "IMMUTABLE"
-  force_delete         = false
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-  encryption_configuration {
-    encryption_type = "AES256"
+data "aws_ecr_repository" "images" {
+  for_each = toset(["pingdirectory", "pingdirectoryproxy", "pingfederate", "pingaccess"])
+  name     = "${var.cluster_name}/${each.key}"
+}
+
+# Ownership moves to foundation/. Forget old addresses without deleting images.
+removed {
+  from = aws_ecr_repository.images
+  lifecycle {
+    destroy = false
   }
 }
