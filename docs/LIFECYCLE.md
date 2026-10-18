@@ -199,6 +199,8 @@ Older backups may predate the logging sidecar Secrets referenced by current GitO
 manifests. Setup restores missing logging Secrets from the version-pinned logging
 passwords and certificates in the bootstrap files before syncing workloads. It
 does not generate new credentials or replace Secrets already in the inventory.
+Application destination namespaces are also created before sync, so optional
+applications introduced after an older backup can be reconciled safely.
 
 ## Failure handling and acceptance
 

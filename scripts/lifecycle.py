@@ -616,6 +616,10 @@ class Lifecycle:
         self.kubeconfig()
         command([sys.executable, ROOT/'scripts/project.py', 'bootstrap'])
         self.bootstrap_runtime(prepared)
+        self.restore_workloads(bundle, backup_id, handles, from_snapshots)
+
+    def restore_workloads(self, bundle, backup_id, handles, from_snapshots=False):
+        """Sync and verify workloads after infrastructure/storage bootstrap."""
         project_doc = ROOT/'gitops/applications/project.yaml'
         self.kube('apply', '-f', str(project_doc))
         import yaml
@@ -626,6 +630,11 @@ class Lifecycle:
                     continue
                 if doc['kind'] == 'Application':
                     doc.get('spec', {}).get('syncPolicy', {}).pop('automated', None)
+                    namespace = doc['spec']['destination']['namespace']
+                    if namespace not in NAMESPACES:
+                        raise ValueError('Unexpected application destination namespace')
+                    self.kube('apply', '-f', '-', data=json.dumps({'apiVersion': 'v1', 'kind': 'Namespace',
+                              'metadata': {'name': namespace}}))
                     apps[doc['metadata']['name']] = doc
                 self.kube('apply', '-f', '-', data=json.dumps(doc))
         seed = json.loads((ROOT/'config.json').read_text())['initial_seed_colour']
