@@ -26,6 +26,11 @@ APPS={'pd-blue':'identity-blue','pd-green':'identity-green','pd-proxy':'identity
 def config():
     path=GITOPS/'config.json'
     c=json.loads((path if path.exists() else GITOPS/'config.example.json').read_text())
+    # Version-pinned recovery bundles may contain the former canonical URL.
+    # Normalize only this project's rename; unrelated repositories are unchanged.
+    if c['repo_url'].rstrip('/') in ('https://github.com/DarkEdgesAU/pingdirectory-eks-spot',
+                                    'https://github.com/DarkEdgesAU/pingdirectory-eks-spot.git'):
+        c['repo_url']='https://github.com/DarkEdgesAU/ping-eks-spot.git'
     if not c['repo_url'].startswith('https://github.com/') or '@' in c['repo_url']:
         raise ValueError('Use a credential-free GitHub repository URL; install private repo credentials separately')
     if not c['revision'] or not c['ecr_prefix'] or not c['hostname']:

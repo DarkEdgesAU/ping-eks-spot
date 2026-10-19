@@ -1,6 +1,13 @@
 # Manual EKS lifecycle with local Vault
 
-The repository is now [DarkEdgesAU/pingdirectory-eks-spot](https://github.com/DarkEdgesAU/pingdirectory-eks-spot).
+The repository is now [DarkEdgesAU/ping-eks-spot](https://github.com/DarkEdgesAU/ping-eks-spot).
+
+Renamed from `DarkEdgesAU/pingdirectory-eks-spot` on 20 October 2026. The repository
+and organisation IDs remain unchanged, but GitHub's immutable OIDC subject prefix
+includes the new name. The AWS trust subject, Vault repository/workflow claims and
+local ARC registration must use the new identity. Older recovery bundles keep their
+original bytes; GitOps configuration loading normalizes this project's former URL.
+The existing local checkout folder may keep its original name.
 The implementation branch adds protected manual workflows and local equivalents.
 AWS foundation bootstrap, Vault project authentication and a live recovery rehearsal
 must complete before treating these workflows as operational.

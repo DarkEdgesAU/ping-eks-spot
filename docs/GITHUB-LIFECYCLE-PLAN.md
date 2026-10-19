@@ -9,7 +9,7 @@ limits are in [LIFECYCLE.md](LIFECYCLE.md); the remainder records the original d
 
 ## Verified GitHub prerequisites
 
-- Transferred repository: `DarkEdgesAU/pingdirectory-eks-spot`, public, default branch `main`.
+- Transferred repository: `DarkEdgesAU/ping-eks-spot`, public, default branch `main`.
 - The authenticated account has repository admin access and is an active
   administrator of `DarkEdgesAU` (GitHub Team).
 - Repository ID remains `1415576809`; organisation ID is `299816438`.

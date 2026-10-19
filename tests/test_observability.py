@@ -9,6 +9,20 @@ import observability as obs
 
 
 class LoggingTests(unittest.TestCase):
+    def test_gitops_recovers_pre_rename_configuration(self):
+        import gitops
+        import json
+        original=json.loads((gitops.GITOPS/'config.example.json').read_text())
+        for url, expected in [
+            ('https://github.com/DarkEdgesAU/pingdirectory-eks-spot.git',
+             'https://github.com/DarkEdgesAU/ping-eks-spot.git'),
+            ('https://github.com/another/project.git','https://github.com/another/project.git')]:
+            with tempfile.TemporaryDirectory() as folder:
+                root=Path(folder)
+                (root/'config.json').write_text(json.dumps({**original,'repo_url':url}))
+                with patch.object(gitops,'GITOPS',root):
+                    self.assertEqual(gitops.config()['repo_url'],expected)
+
     def test_gitops_config_works_in_clean_checkout(self):
         import gitops
         with tempfile.TemporaryDirectory() as folder:
