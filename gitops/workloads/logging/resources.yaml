@@ -336,3 +336,113 @@ spec:
       - name: buffer
         emptyDir:
           sizeLimit: 256Mi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboards-bootstrap
+  namespace: logging
+data:
+  bootstrap.js: "// Run after Dashboards is healthy. Never log credentials or response\
+    \ bodies.\nconst fs = require('fs');\nconst https = require('https');\nconst base\
+    \ = process.env.DASHBOARDS_URL || 'https://dashboards.logging.svc.cluster.local:5601';\n\
+    \nasync function request(method, path, body) {\n  const password = fs.readFileSync('/bootstrap-auth/admin-password',\
+    \ 'utf8');\n  const ca = fs.readFileSync('/bootstrap-ca/ca.crt');\n  const data\
+    \ = body === undefined ? undefined : JSON.stringify(body);\n  return new Promise((resolve,\
+    \ reject) => {\n    const req = https.request(new URL(path, base), {\n      method,\
+    \ ca, rejectUnauthorized: true,\n      headers: {'Authorization': 'Basic '+Buffer.from('admin:'+password).toString('base64'),\n\
+    \        'securitytenant': 'global', 'osd-xsrf': 'true', 'Content-Type': 'application/json'},\n\
+    \    }, response => {\n      let text = '';\n      response.on('data', chunk =>\
+    \ { text += chunk; });\n      response.on('end', () => {\n        if (response.statusCode\
+    \ === 404) return resolve(null);\n        if (response.statusCode < 200 || response.statusCode\
+    \ >= 300)\n          return reject(new Error('Dashboards API HTTP '+response.statusCode));\n\
+    \        try { resolve(JSON.parse(text)); } catch { reject(new Error('Invalid\
+    \ Dashboards API response')); }\n      });\n    });\n    req.setTimeout(15000,\
+    \ () => req.destroy(new Error('Dashboards API timeout')));\n    req.on('error',\
+    \ reject);\n    req.end(data);\n  });\n}\n\nasync function bootstrap(api = request)\
+    \ {\n  let defaultId;\n  for (const id of ['logs-ping', 'logs-containers']) {\n\
+    \    const title = id+'-*';\n    const found = await api('GET', '/api/saved_objects/_find?type=index-pattern&per_page=10000');\n\
+    \    if (!found || !Array.isArray(found.saved_objects)) throw new Error('Index\
+    \ pattern lookup failed');\n    const existing = found.saved_objects.find(object\
+    \ => object.attributes.title === title);\n    let object = existing;\n    if (!object)\
+    \ {\n      object = await api('GET', '/api/saved_objects/index-pattern/'+id);\n\
+    \      if (object && object.attributes.title !== title) throw new Error('Bootstrap\
+    \ index pattern ID is already in use');\n      if (!object) object = await api('POST',\
+    \ '/api/saved_objects/index-pattern/'+id,\n        {attributes: {title, timeFieldName:\
+    \ '@timestamp'}});\n    }\n    if (!object || !object.id) throw new Error('Index\
+    \ pattern creation failed');\n    if (id === 'logs-ping') defaultId = object.id;\n\
+    \  }\n  const status = await api('GET', '/api/status');\n  const version = status\
+    \ && status.version && status.version.number;\n  if (!version || !/^\\d+\\.\\\
+    d+\\.\\d+/.test(version)) throw new Error('Dashboards version unavailable');\n\
+    \  const path = '/api/saved_objects/config/'+encodeURIComponent(version);\n  const\
+    \ settings = await api('GET', path);\n  const attributes = {};\n  if (!settings\
+    \ || !settings.attributes.defaultIndex) attributes.defaultIndex = defaultId;\n\
+    \  if (!settings || !settings.attributes.defaultRoute) attributes.defaultRoute\
+    \ = '/app/discover';\n  if (Object.keys(attributes).length) await api(settings\
+    \ ? 'PUT' : 'POST', path, {attributes});\n}\n\nmodule.exports = {bootstrap};\n\
+    if (require.main === module) {\n  (async () => {\n    for (let attempt = 0; attempt\
+    \ < 30; attempt++) {\n      try { await bootstrap(); console.log('Global log index\
+    \ patterns and defaults are ready.'); return; }\n      catch (error) {\n     \
+    \   if (attempt === 29) throw new Error('Dashboards bootstrap failed; inspect\
+    \ API access and saved-object compatibility.');\n        await new Promise(resolve\
+    \ => setTimeout(resolve, 5000));\n      }\n    }\n  })().catch(error => { console.error(error.message);\
+    \ process.exitCode = 1; });\n}\n"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dashboards-bootstrap
+  namespace: logging
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+      - name: bootstrap
+        image: opensearchproject/opensearch-dashboards:3.6.0
+        command:
+        - /usr/share/opensearch-dashboards/node/bin/node
+        - /bootstrap/bootstrap.js
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 192Mi
+        volumeMounts:
+        - name: script
+          mountPath: /bootstrap
+          readOnly: true
+        - name: auth
+          mountPath: /bootstrap-auth
+          readOnly: true
+        - name: ca
+          mountPath: /bootstrap-ca
+          readOnly: true
+      volumes:
+      - name: script
+        configMap:
+          name: dashboards-bootstrap
+      - name: auth
+        secret:
+          secretName: logging-bootstrap
+      - name: ca
+        secret:
+          secretName: logging-tls
+          items:
+          - key: ca.crt
+            path: ca.crt

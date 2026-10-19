@@ -36,3 +36,5 @@ spec:
     kind: RoleBinding
   - group: apps
     kind: DaemonSet
+  - group: batch
+    kind: Job

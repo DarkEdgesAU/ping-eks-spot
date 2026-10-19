@@ -78,7 +78,7 @@ def logging_secrets_from_files(files, documents):
     """Fill missing optional logging Secrets from exact pinned bootstrap bytes."""
     required = set()
     for doc in documents:
-        if doc.get('kind') not in ('StatefulSet', 'Deployment', 'DaemonSet'):
+        if doc.get('kind') not in ('StatefulSet', 'Deployment', 'DaemonSet', 'Job'):
             continue
         namespace = doc.get('metadata', {}).get('namespace')
         pod = doc.get('spec', {}).get('template', {}).get('spec', {})
@@ -87,10 +87,11 @@ def logging_secrets_from_files(files, documents):
             names.update(e.get('valueFrom', {}).get('secretKeyRef', {}).get('name')
                          for e in container.get('env', []))
         required.update((namespace, name) for name in names
-                        if name in ('log-shipper', 'logging-auth', 'logging-tls'))
+                        if name in ('log-shipper', 'logging-auth', 'logging-tls', 'logging-bootstrap'))
     mappings = {
         'log-shipper': {'password': 'shipper-password', 'ca.crt': 'ca.crt'},
         'logging-auth': {'internal_users.yml': 'internal_users.yml', 'dashboards-password': 'dashboards-password'},
+        'logging-bootstrap': {'admin-password': 'admin-password'},
         'logging-tls': {name: name for name in ('opensearch.crt', 'opensearch.key', 'dashboards.crt', 'dashboards.key', 'ca.crt')},
     }
     result = []

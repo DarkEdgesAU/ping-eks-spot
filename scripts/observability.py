@@ -182,6 +182,26 @@ def manifests():
         'volumes': [{'name': 'logs', 'hostPath': {'path': '/var/log', 'type': 'Directory'}},
             {'name': 'cfg', 'configMap': {'name': 'node-log-collector'}},
             {'name': 'auth', 'secret': {'secretName': 'log-shipper'}}, {'name': 'buffer', 'emptyDir': {'sizeLimit': '256Mi'}}]}))
+    docs.append(resource('ConfigMap', 'dashboards-bootstrap', data={
+        'bootstrap.js': (SOURCE/'bootstrap-dashboards.js').read_text()}))
+    job = resource('Job', 'dashboards-bootstrap', {
+        'backoffLimit': 2, 'activeDeadlineSeconds': 600,
+        'template': {'spec': {'restartPolicy': 'Never', 'automountServiceAccountToken': False,
+            'securityContext': {'runAsUser': 1000, 'runAsGroup': 1000},
+            'containers': [{'name': 'bootstrap', 'image': c['dashboards_image'],
+                'command': ['/usr/share/opensearch-dashboards/node/bin/node', '/bootstrap/bootstrap.js'],
+                'securityContext': {'allowPrivilegeEscalation': False, 'capabilities': {'drop': ['ALL']}},
+                'resources': {'requests': {'cpu': '50m', 'memory': '64Mi'}, 'limits': {'memory': '192Mi'}},
+                'volumeMounts': [{'name': 'script', 'mountPath': '/bootstrap', 'readOnly': True},
+                    {'name': 'auth', 'mountPath': '/bootstrap-auth', 'readOnly': True},
+                    {'name': 'ca', 'mountPath': '/bootstrap-ca', 'readOnly': True}]}],
+            'volumes': [{'name': 'script', 'configMap': {'name': 'dashboards-bootstrap'}},
+                {'name': 'auth', 'secret': {'secretName': 'logging-bootstrap'}},
+                {'name': 'ca', 'secret': {'secretName': 'logging-tls', 'items': [{'key': 'ca.crt', 'path': 'ca.crt'}]}}]}}})
+    job['apiVersion'] = 'batch/v1'
+    job['metadata']['annotations'] = {'argocd.argoproj.io/hook': 'PostSync',
+        'argocd.argoproj.io/hook-delete-policy': 'BeforeHookCreation,HookSucceeded'}
+    docs.append(job)
     return docs
 
 
@@ -248,9 +268,18 @@ def cluster_secrets():
         project.apply({'apiVersion': 'v1', 'kind': 'Secret', 'metadata': {'name': 'log-shipper', 'namespace': ns},
             'data': {'password': base64.b64encode((PRIVATE/'shipper-password').read_bytes()).decode(),
                      'ca.crt': base64.b64encode((PRIVATE/'ca.crt').read_bytes()).decode()}})
-    for name, files in [('logging-auth', {'internal_users.yml': 'internal_users.yml', 'dashboards-password': 'dashboards-password'}),
+    for name, files in [('logging-bootstrap', {'admin-password': 'admin-password'}),
+                        ('logging-auth', {'internal_users.yml': 'internal_users.yml', 'dashboards-password': 'dashboards-password'}),
                         ('logging-tls', {n: n for n in ('opensearch.crt', 'opensearch.key', 'dashboards.crt', 'dashboards.key', 'ca.crt')})]:
         project.apply(resource('Secret', name, data={k: base64.b64encode((PRIVATE/v).read_bytes()).decode() for k,v in files.items()}))
+
+
+def bootstrap_secrets():
+    """Deliver the existing password only; never generate or rotate it."""
+    import project
+    project.check_context(project.config())
+    project.apply(resource('Secret', 'logging-bootstrap', type='Opaque', data={
+        'admin-password': base64.b64encode((PRIVATE/'admin-password').read_bytes()).decode()}))
 
 
 def ingress():
@@ -277,10 +306,11 @@ def ingress():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['prepare', 'secrets', 'render', 'ingress', 'enable'])
+    parser.add_argument('command', choices=['prepare', 'secrets', 'bootstrap-secrets', 'render', 'ingress', 'enable'])
     args = parser.parse_args()
     if args.command == 'prepare': prepare_secrets()
     elif args.command == 'secrets': cluster_secrets()
+    elif args.command == 'bootstrap-secrets': bootstrap_secrets()
     elif args.command == 'render': export()
     elif args.command == 'ingress': ingress()
     else:
