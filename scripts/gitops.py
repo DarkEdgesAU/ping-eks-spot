@@ -175,6 +175,7 @@ def logging_application(c):
     spec['description']='OpenSearch log-shipping POC'
     spec['destinations']=[{'server':'https://kubernetes.default.svc','namespace':'logging'}]
     spec['namespaceResourceWhitelist'].append({'group':'apps','kind':'DaemonSet'})
+    spec['namespaceResourceWhitelist'].append({'group':'batch','kind':'Job'})
     project_doc={'apiVersion':'argoproj.io/v1alpha1','kind':'AppProject',
         'metadata':{'name':'observability','namespace':NAMESPACE},'spec':spec}
     app=application(c,'logging','logging'); app['spec']['project']='observability'

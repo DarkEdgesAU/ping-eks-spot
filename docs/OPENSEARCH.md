@@ -98,10 +98,36 @@ protects the UI; no Cloudflare Access or PF SSO setup is required for this POC.
 The readiness/ALB check uses `/app/login`; `/api/status` requires authentication
 and would incorrectly make the backend appear unhealthy without credentials.
 
-In Dashboards create an index pattern/data view `logs-ping-*`, then
-`logs-containers-*`, using `@timestamp`. Use Discover to inspect `log`, product,
-colour, namespace/pod, source file and node fields. Raw product JSON/stack traces
-are retained as the `log` message for this first proof.
+The logging application includes a bounded Argo CD PostSync Job that creates
+`logs-ping-*` and `logs-containers-*` with `@timestamp` in the shared **Global**
+tenant after Dashboards is healthy. It reuses existing patterns (including manual
+UUIDs), preserves existing defaults, and otherwise selects Ping logs and Discover
+as the starting view. Choose the Global tenant in Dashboards to see shared views;
+private tenants keep their own saved objects. Browser onboarding prompts may still
+be shown; Discover has the patterns ready without adding data or an agent.
+
+For the existing stack, after merging these manifests, deliver the existing admin
+password to the dedicated bootstrap Secret, register the updated namespace-scoped
+Job permission, and sync logging:
+
+```powershell
+make logging-bootstrap-secrets 'PYTHON=py -3'
+make argocd-applications 'PYTHON=py -3'
+argocd app sync logging --grpc-web
+argocd app wait logging --sync --health --operation --timeout 600 --grpc-web
+```
+
+Use the EKS kubeconfig and AWS profile for these commands. `bootstrap-secrets`
+reads `.secrets/logging/admin-password`; it never generates credentials. On a
+lifecycle restore the bootstrap Secret is reconstructed automatically from the
+version-pinned Vault/encrypted backup files before sync. Credentials stay out of
+Git. The Job mounts only the CA certificate from the TLS Secret, validates HTTPS,
+and runs without a Kubernetes API token. Failed Jobs remain available for
+diagnostics; successful Jobs are removed and recreated on subsequent syncs.
+
+Use Discover to inspect `log`, product, colour, namespace/pod, source file and node
+fields. Raw product JSON/stack traces are retained as the `log` message for this POC.
+The bootstrap uses the documented [Dashboards Saved Objects APIs](https://docs.opensearch.org/latest/dashboards/management/saved-objects-api/).
 
 ## Boundaries and operating notes
 

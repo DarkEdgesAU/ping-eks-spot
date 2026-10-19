@@ -52,6 +52,9 @@ logging-render:
 	$(PYTHON) scripts/observability.py render
 logging-ingress:
 	$(PYTHON) scripts/observability.py ingress
+.PHONY: logging-bootstrap-secrets
+logging-bootstrap-secrets:
+	$(PYTHON) scripts/observability.py bootstrap-secrets
 logging-local-test:
 	$(PYTHON) scripts/logging_smoke.py
 logging-verify:
