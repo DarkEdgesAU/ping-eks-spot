@@ -1,5 +1,5 @@
 # Matches the existing local ARC chart, version 0.14.2. Dedicated repository scope.
-githubConfigUrl: https://github.com/DarkEdgesAU/pingdirectory-eks-spot
+githubConfigUrl: https://github.com/DarkEdgesAU/ping-eks-spot
 githubConfigSecret: arc-runner-set-github-app
 runnerScaleSetName: ping-eks-lifecycle
 minRunners: 0

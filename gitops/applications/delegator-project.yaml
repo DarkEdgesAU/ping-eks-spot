@@ -6,7 +6,7 @@ metadata:
 spec:
   description: Optional platform services; secrets and routing stay operator-owned
   sourceRepos:
-  - https://github.com/DarkEdgesAU/pingdirectory-eks-spot.git
+  - https://github.com/DarkEdgesAU/ping-eks-spot.git
   destinations:
   - server: https://kubernetes.default.svc
     namespace: identity-delegator
